@@ -37,11 +37,11 @@ void print_output() {
   // Print registers
   printf("Registers:\n");
   for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
-    printf("X%-2d    = %016x\n", i, STATE.registers[i]);
+    printf("X%-2d    = %0161x\n", i, STATE.registers[i]);
   }
 
   // Print PC
-  printf("PC     = %016x\n", STATE.pc);
+  printf("PC     = %0161x\n", STATE.pc);
 
   // Print PSTATE flags
   printf("PSTATE : %c-%c-%c-%c\n",
@@ -52,12 +52,48 @@ void print_output() {
 
   // Print memory
   printf("Non-zero memory:\n");
-  for (int i = 0; i < MEMORY_SIZE; i++) {
+  for (int i = 0; i < MEMORY_SIZE / sizeof(uint32_t); i++) {
     if (STATE.memory[i] != 0) {
-      printf("0x%08x: 0x%08x\n", i * 4, bswap_32(STATE.memory[i]));
+      printf("0x%08x: 0x%08x\n", i * sizeof(uint32_t), STATE.memory[i]);
     }
   }
+}
 
+enum instr_type {
+  DATA_PROCESSING_IMMEDIATE,
+  BRANCHES,
+  SINGLE_DATA_TRANSFER,
+  DATA_PROCESSING_REGISTER,
+  UNRECOGNISED
+};
+
+// Decode instruction using bits 28 to 25 in instruction.
+
+int decode(instruction instr) {
+  // Extract bits 28 to 25
+  byte bits_28_to_25 = (instr >> 25) & 0xf;
+
+  // Decode instruction
+  switch (bits_28_to_25) {
+    case 0x8:
+    case 0x9:
+      return DATA_PROCESSING_IMMEDIATE;
+      break;
+    case 0xa:
+    case 0xb:
+      return BRANCHES;
+      break;
+    case 0x5:
+    case 0xd:
+      return DATA_PROCESSING_REGISTER;
+      break;
+    case 0xc:
+      return SINGLE_DATA_TRANSFER;
+      break;
+    default:
+      return UNRECOGNISED;
+      break;
+  }
 }
 
 int main(int argc, char **argv) {
@@ -81,14 +117,16 @@ int main(int argc, char **argv) {
   }
 
   // Load binary file into memory
-  FILE *fp = fopen(argv[1], "rb");
+  FILE *fp;
+
+  fp = fopen(argv[1], "rb");
   if (fp == NULL) {
-    perror("Error opening file");
+    perror("Error opening the binary file!\n");
     exit(EXIT_FAILURE);
   }
 
-  // Read the file into memory
-  fread(STATE.memory, sizeof(byte), MEMORY_SIZE, fp);
+  fread(STATE.memory, sizeof(STATE.memory), 1, fp);
+
   fclose(fp);
 
   return EXIT_SUCCESS;
