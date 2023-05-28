@@ -151,6 +151,30 @@ void data_processing_immediate(instruction instr) {
     // Store the result in the destination register
     STATE.registers[rd] = result;
   }
+
+  // Wide Move - check opi is 101
+  else if (opi == 0x5) {
+    // Extract bit 22-21
+    byte hw = (instr >> 21) & 0x3;
+    // Extract bits 20-5
+    byte imm16 = (instr >> 5) & 0xffff;
+
+    // Calculate the result based on the opcode
+    switch (opc) {
+      case 0x0:
+        // MOVZ
+        STATE.registers[rd] = (hw ? (imm16 << 16) : imm16);
+        break;
+      case 0x2:
+        // MOVN
+        STATE.registers[rd] = ~(hw ? (imm16 << 16) : imm16);
+        break;
+      case 0x3:
+        // MOVK
+
+    }
+  }
+
 }
 
 
