@@ -207,7 +207,6 @@ void data_processing_immediate(instruction instr) {
 }
 
 // Data Processing Register
-
 void data_processing_register(instruction instr) {
   // Extract bit 31
   byte sf = (instr >> 31) & 0x1;
@@ -539,7 +538,7 @@ void process_instructions(void) {
 int main(int argc, char **argv) {
 
   if (argc != 2) {
-    printf("Usage: ./emulator <filename>\n");
+    printf("Usage: ./emulate <filename>\n");
     return EXIT_FAILURE;
   }
 
