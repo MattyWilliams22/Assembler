@@ -231,6 +231,7 @@ void data_processing_register(instruction instr) {
   // Logic and Arithmetic Instructions
 
   if (M == 0) {
+    // Extract bits 23-22
     byte shift_type = (instr >> 22) & 0x3;
     reg op2 = STATE.registers[rm];
     
@@ -256,7 +257,8 @@ void data_processing_register(instruction instr) {
 
     // Logical Instructions
 
-    if ((instr >> 24) & 0x1 == 0) {
+    if (((instr >> 24) & 0x1) == 0) {
+      // Extract bit 21
       bool N = (instr >> 21) & 0x1;
       
       switch (opc) {
@@ -299,18 +301,61 @@ void data_processing_register(instruction instr) {
           STATE.pstate.v = 0;
           break;
       }
-
     }
 
     // Arithmetic Instructions
 
     if (((instr >> 24) & 0x1 == 1) && ((instr >> 21) & 0x1 == 0)) {
+      switch (opc) {
+        case 0x0:  // ADD
+          result = STATE.registers[rn] + op2;
+          break;
 
+        case 0x1:  // ADDS
+          result = STATE.registers[rn] + op2;
+          STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
+          STATE.pstate.z = (result == 0);
+          STATE.pstate.c = (result < STATE.registers[rn]) || (result < op2);
+          STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ op2) >> (sf ? 63 : 31)) & 0x1);
+          break;
+
+        case 0x2:  // SUB
+          result = STATE.registers[rn] - op2;
+          break;
+
+        case 0x3:  // SUBS
+          result = STATE.registers[rn] - op2;
+          STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
+          STATE.pstate.z = (result == 0);
+          STATE.pstate.c = (STATE.registers[rn] >= op2);
+          STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ op2) >> (sf ? 63 : 31)) & 0x1);
+          break;
+      }
     }
   }
- 
- 
 
+  // Multiply Instructions
+
+  if (M == 1 && opr == 0x8) {
+    // Extract bit 15
+    bool x = (instr >> 15) & 0x1;
+    // Extract bits 14-10
+    byte ra = (instr >> 10) & 0x1f;
+
+    if (ra == 0x1f) {
+      ra = 0x0;
+    }
+
+    if (x == 0) {
+      // MADD
+      result = STATE.registers[ra] + STATE.registers[rn] * STATE.registers[rm];
+    } else {
+      // MSUB
+      result = STATE.registers[ra] - STATE.registers[rn] - STATE.registers[rm];
+    }
+  }
+
+  STATE.registers[rd] = result;
 }
 
 // Single Data Transfer
