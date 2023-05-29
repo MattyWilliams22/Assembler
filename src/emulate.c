@@ -193,6 +193,9 @@ void single_data_transfer(instruction instr) {
 }
 
 void initialise_memory(void) {
+  // Set program counter to 0
+  STATE.pc = 0;
+
   // Initialise the pstate
   STATE.pstate = (pstate) {.n = 0, .z = 0, .c = 0, .v = 0};
   
@@ -208,12 +211,11 @@ void initialise_memory(void) {
 }
 
 void process_instructions(void) {
-  int i = 0;
   instruction instr;
   int decoded;
 
-  while (STATE.memory[i] != HALT) {
-    instr = STATE.memory[i];
+  while (STATE.memory[STATE.pc] != HALT) {
+    instr = STATE.memory[STATE.pc];
     decoded = decode(instr);
 
     switch(decoded) {
@@ -236,7 +238,7 @@ void process_instructions(void) {
 
     }
 
-    i++;
+    STATE.pc++;
   }
 
 }
