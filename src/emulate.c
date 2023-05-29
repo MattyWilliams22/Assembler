@@ -162,21 +162,46 @@ void data_processing_immediate(instruction instr) {
     // Calculate the result based on the opcode
     switch (opc) {
       case 0x0:
-        // MOVZ
-        STATE.registers[rd] = (hw ? (imm16 << 16) : imm16);
+        // MOVN
+        STATE.registers[rd] = ~(imm16 << (hw * 16));
         break;
       case 0x2:
-        // MOVN
-        STATE.registers[rd] = ~(hw ? (imm16 << 16) : imm16);
+        // MOVZ
+        STATE.registers[rd] = imm16 << (hw * 16);
         break;
       case 0x3:
         // MOVK
-
+        STATE.registers[rd] = (STATE.registers[rd] & ~(0xffff << (hw * 16))) | (imm16 << (hw * 16));
+        break;
     }
   }
-
 }
 
+// Data Processing Register
+
+void data_processing_register(instruction instr) {
+  // Extract bit 31
+  byte sf = (instr >> 31) & 0x1;
+  // Extract bits 30-29
+  byte opc = (instr >> 29) & 0x3;
+  // Extract bit 28
+  byte M = (instr >> 28) & 0x1;
+  // Extract bits 24-21
+  byte opr = (instr >> 21) & 0xf;
+  // Extract bits 20-16
+  byte rm = (instr >> 16) & 0x1f;
+  // Extract bits 15-10
+  byte operand = (instr >> 10) & 0x3f;
+  // Extract bits 9-5
+  byte rn = (instr >> 5) & 0x1f;
+  // Extract bits 4-0
+  byte rd = instr & 0x1f;
+
+  reg result;
+
+  
+
+}
 
 int main(int argc, char **argv) {
 
