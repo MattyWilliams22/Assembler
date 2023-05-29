@@ -154,16 +154,18 @@ void data_processing_immediate(instruction instr) {
     byte hw = (instr >> 21) & 0x3;
     // Extract bits 20-5
     byte imm16 = (instr >> 5) & 0xffff;
+    // Operand
+    byte operand = imm16 << (hw * 16);
 
     // Calculate the result based on the opcode
     switch (opc) {
       case 0x0:
-        // MOVZ
-        STATE.registers[rd] = (hw ? (imm16 << 16) : imm16);
+        // MOVN
+        STATE.registers[rd] = ~operand;
         break;
       case 0x2:
-        // MOVN
-        STATE.registers[rd] = ~(hw ? (imm16 << 16) : imm16);
+        // MOVZ
+        STATE.registers[rd] = operand;
         break;
       case 0x3:
         // MOVK
@@ -211,11 +213,13 @@ void initialise_memory(void) {
 }
 
 void process_instructions(void) {
+  int i = 0;
   instruction instr;
   int decoded;
 
-  while (STATE.memory[STATE.pc] != HALT) {
-    instr = STATE.memory[STATE.pc];
+  while (STATE.memory[i] != HALT) {
+    i = STATE.pc / 4;
+    instr = STATE.memory[i];
     decoded = decode(instr);
 
     switch(decoded) {
@@ -237,8 +241,11 @@ void process_instructions(void) {
         break;
 
     }
-
-    STATE.pc++;
+    
+    // Don't increment if next instruction is HALT
+    if (STATE.memory[i++] != HALT) {
+      STATE.pc += 4;
+    }
   }
 
 }
