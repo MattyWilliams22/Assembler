@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+#include <libgen.h>
 
 //Emulating A64 instructions
 
@@ -27,6 +29,7 @@ typedef struct {
   reg registers[NUMBER_OF_REGISTERS];
   pstate pstate;
   reg pc;
+  reg zr;
   uint32_t memory[MEMORY_SIZE];
 } state;
 
@@ -304,7 +307,7 @@ void data_processing_register(instruction instr) {
 
     // Arithmetic Instructions
 
-    if (((instr >> 24) & 0x1 == 1) && ((instr >> 21) & 0x1 == 0)) {
+    if ((((instr >> 24) & 0x1) == 1) && (((instr >> 21) & 0x1) == 0)) {
       switch (opc) {
         case 0x0:  // ADD
           result = STATE.registers[rn] + op2;
@@ -334,7 +337,6 @@ void data_processing_register(instruction instr) {
   }
 
   // Multiply Instructions
-
   if (M == 1 && opr == 0x8) {
     // Extract bit 15
     bool x = (instr >> 15) & 0x1;
@@ -353,8 +355,10 @@ void data_processing_register(instruction instr) {
       result = STATE.registers[ra] - STATE.registers[rn] - STATE.registers[rm];
     }
   }
-
-  STATE.registers[rd] = result;
+  
+  if (rd != 31) {
+    STATE.registers[rd] = result;
+  }
 }
 
 // Single Data Transfer
@@ -379,9 +383,14 @@ void single_data_transfer(instruction instr) {
   // Load Literal
   if (load_lit == 0) {
     // Extract bits 23 to 5
-    byte simm19 = (instr >> 5) & 0x7ffff;
+    int simm19 = (instr >> 5) & 0x7ffff;
 
-    STATE.registers[rt] = STATE.memory[STATE.pc + simm19];
+    // Sign extend to 64 bits
+    bool sign_bit = (simm19 >> 18) & 0x1;
+    int mask = sign_bit << 18;
+    int extended = (simm19 ^ mask) - mask;
+
+    STATE.registers[rt] = STATE.memory[(STATE.pc + (extended * 4)) / 4];
   } else {
     // Unsigned Immediate Offset
     if (U == 1) {
@@ -413,10 +422,10 @@ void single_data_transfer(instruction instr) {
 
     // Load Instruction
     if (L == 1) {
-      STATE.registers[rt] = STATE.memory[address];
+      STATE.registers[rt] = (sf ? STATE.memory[address] : (STATE.memory[address] & 0xffffffff));
     // Store Instruction
     } else {
-      STATE.memory[address] = STATE.registers[rt]; 
+      STATE.memory[address] = (sf ? STATE.registers[rt] : (STATE.registers[rt] & 0xffffffff)); 
     }
   }
 }
@@ -444,32 +453,44 @@ void branch_instructions(instruction instr) {
       switch (cond) {
         case 0x0:
           if (STATE.pstate.z == 1) {
-            STATE.pc = STATE.pc + simm19 * 4;
+           STATE.pc = STATE.pc + simm19 * 4;
+          } else {
+            STATE.pc += 4;
           }
           break;
         case 0x1:
           if (STATE.pstate.z == 0) {
             STATE.pc = STATE.pc + simm19 * 4;
+          } else {
+            STATE.pc += 4;
           }
           break;
         case 0xa:
           if (STATE.pstate.n == 1) {
             STATE.pc = STATE.pc + simm19 * 4;
+          } else {
+            STATE.pc += 4;
           }
           break;
         case 0xb:
           if (STATE.pstate.n != 1) {
             STATE.pc = STATE.pc + simm19 * 4;
+          } else {
+            STATE.pc += 4;
           }
           break;
         case 0xc:
           if (STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v) {
             STATE.pc = STATE.pc + simm19 * 4;
+          } else {
+            STATE.pc += 4;
           }
           break;
         case 0xd:
           if (!(STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v)) {
             STATE.pc = STATE.pc + simm19 * 4;
+          } else {
+            STATE.pc += 4;
           }
           break;
         case 0xe:
@@ -482,6 +503,9 @@ void branch_instructions(instruction instr) {
 void initialise_memory(void) {
   // Set program counter to 0
   STATE.pc = 0;
+
+  // Set zero register to 0
+  STATE.zr = 0;
 
   // Initialise the pstate
   STATE.pstate = (pstate) {.n = 0, .z = 0, .c = 0, .v = 0};
@@ -524,15 +548,15 @@ void process_instructions(void) {
         break;
       // Data Processing Instruction (Register)
       case 3:
-        STATE.pc += 4;
-
+        if (instr != HALT) {
+          data_processing_register(instr);
+          STATE.pc += 4;
+        }
         break;
       default:
-        STATE.pc += 4;
     }
   }
   STATE.pstate.z = 1;
-  STATE.pc -= 4;
 }
 
 int main(int argc, char **argv) {
