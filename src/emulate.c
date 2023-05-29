@@ -5,8 +5,9 @@
 
 //Emulating A64 instructions
 
-#define NUMBER_OF_REGISTERS 32
+#define NUMBER_OF_REGISTERS 31
 #define MEMORY_SIZE 2097152
+#define HALT 0x8a000000
 
 // Readable aliases for types
 typedef uint64_t reg;
@@ -32,29 +33,28 @@ typedef struct {
 state STATE;
 
 // Printing the output of the emulator
-
-void print_output() {
+void print_output(void) {
   // Print registers
   printf("Registers:\n");
   for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
-    printf("X%-2d    = %0161x\n", i, STATE.registers[i]);
+    printf("X%-2d    = %016lx\n", i, STATE.registers[i]);
   }
 
   // Print PC
-  printf("PC     = %0161x\n", STATE.pc);
+  printf("PC     = %016lx\n", STATE.pc);
 
   // Print PSTATE flags
-  printf("PSTATE : %c-%c-%c-%c\n",
+  printf("PSTATE : %c%c%c%c\n",
          STATE.pstate.n ? 'N' : '-',
          STATE.pstate.z ? 'Z' : '-',
          STATE.pstate.c ? 'C' : '-',
          STATE.pstate.v ? 'V' : '-');
 
   // Print memory
-  printf("Non-zero memory:\n");
+  printf("Non-Zero Memory:\n");
   for (int i = 0; i < MEMORY_SIZE / sizeof(uint32_t); i++) {
     if (STATE.memory[i] != 0) {
-      printf("0x%08x: 0x%08x\n", i * sizeof(uint32_t), STATE.memory[i]);
+      printf("0x%08lx : %08x\n", i * sizeof(uint32_t), STATE.memory[i]);
     }
   }
 }
@@ -68,7 +68,6 @@ enum instr_type {
 };
 
 // Decode instruction using bits 28 to 25 in instruction.
-
 int decode(instruction instr) {
   // Extract bits 28 to 25
   byte bits_28_to_25 = (instr >> 25) & 0xf;
@@ -97,7 +96,6 @@ int decode(instruction instr) {
 }
 
 // Data Processing Immediate
-
 void data_processing_immediate(instruction instr) {
   // Extract bit 31
   byte sf = (instr >> 31) & 0x1;
@@ -105,8 +103,6 @@ void data_processing_immediate(instruction instr) {
   byte opc = (instr >> 29) & 0x3;
   // Extract bits 25-23
   byte opi = (instr >> 23) & 0x7;
-  // Extract bits 22-5
-  byte operand = (instr >> 5) & 0x3ffff;
   // Extract bits 4-0
   byte rd = instr & 0x1f;
 
@@ -177,14 +173,26 @@ void data_processing_immediate(instruction instr) {
 
 }
 
+void single_data_transfer(instruction instr) {
+  // Extract bit 30
+  byte sf = (instr >> 24) & 0x1;
+  // Extract bit 24
+  byte U = (instr >> 24) & 0x1;
+  // Extract bit 11
+  byte I = (instr >> 11) & 0x1;
+  // Extract bits 9 to 5
+  byte xn = (instr >> 5) & 0x1f;
+  // Extract bits 4 to 0
+  byte rt = instr  & 0x1f;
 
-int main(int argc, char **argv) {
-
-  if (argc != 2) {
-    printf("Usage: ./emulator <filename>\n");
-    return EXIT_FAILURE;
+  // Unsigned Immediate Offset
+  if (U == 1) {
+    // Extract bits 21 to 10
+    byte imm12 = (instr >> 10) & 0xfff;
   }
+}
 
+void initialise_memory(void) {
   // Initialise the pstate
   STATE.pstate = (pstate) {.n = 0, .z = 0, .c = 0, .v = 0};
   
@@ -197,6 +205,51 @@ int main(int argc, char **argv) {
   for (int i = 0; i < MEMORY_SIZE; i++) {
     STATE.memory[i] = 0;
   }
+}
+
+void process_instructions(void) {
+  int i = 0;
+  instruction instr;
+  int decoded;
+
+  while (STATE.memory[i] != HALT) {
+    instr = STATE.memory[i];
+    decoded = decode(instr);
+
+    switch(decoded) {
+      // Data Processing Instruction (Immediate)
+      case 0:
+        data_processing_immediate(instr);
+        break;
+      // Branch
+      case 1:
+
+        break;
+      // Single Data Transfer
+      case 2:
+        single_data_transfer(instr);
+        break;
+      // Data Processing Instruction (Register)
+      case 3:
+
+        break;
+
+    }
+
+    i++;
+  }
+
+}
+
+int main(int argc, char **argv) {
+
+  if (argc != 2) {
+    printf("Usage: ./emulator <filename>\n");
+    return EXIT_FAILURE;
+  }
+
+  // Initialise the state of the memory
+  initialise_memory();
 
   // Load binary file into memory
   FILE *fp;
@@ -208,8 +261,12 @@ int main(int argc, char **argv) {
   }
 
   fread(STATE.memory, sizeof(STATE.memory), 1, fp);
-
   fclose(fp);
+
+  // Process all of the read-in instructions
+  process_instructions();
+
+  print_output();
 
   return EXIT_SUCCESS;
 }
