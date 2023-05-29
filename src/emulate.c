@@ -194,6 +194,64 @@ void single_data_transfer(instruction instr) {
   }
 }
 
+void branch_instructions(instruction instr) {
+  // Extract bits 31 to 26
+  byte sf = (instr >> 26) & 0x3f;
+  switch (sf) {
+    // Unconditional
+    case 0x5:
+      // Extract bits 25 to 0
+      byte simm26 = instr & 0x3ffffff;
+      STATE.pc = STATE.pc + simm26 * 4;
+      break;
+    case 0x35:
+      // Extract bits 9 to 5
+      byte xn = (instr >> 5) & 0x1f;
+      STATE.pc = xn;
+      break;
+    case 0x15:
+      // Extract bits 23 to 5
+      byte simm19 = (instr >> 5) & 0x7ffff;
+      // Extract bits 3 to 0
+      byte cond = instr & 0xf;
+      switch (cond) {
+        case 0x0:
+          if (STATE.pstate.z == 1) {
+            STATE.pc = STATE.pc + simm19 * 4;
+          }
+          break;
+        case 0x1:
+          if (STATE.pstate.z == 0) {
+            STATE.pc = STATE.pc + simm19 * 4;
+          }
+          break;
+        case 0xa:
+          if (STATE.pstate.n == 1) {
+            STATE.pc = STATE.pc + simm19 * 4;
+          }
+          break;
+        case 0xb:
+          if (STATE.pstate.n != 1) {
+            STATE.pc = STATE.pc + simm19 * 4;
+          }
+          break;
+        case 0xc:
+          if (STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v) {
+            STATE.pc = STATE.pc + simm19 * 4;
+          }
+          break;
+        case 0xd:
+          if (!(STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v)) {
+            STATE.pc = STATE.pc + simm19 * 4;
+          }
+          break;
+        case 0xe:
+          STATE.pc = STATE.pc + simm19 * 4;
+          break;
+      }
+  }
+}
+
 void initialise_memory(void) {
   // Set program counter to 0
   STATE.pc = 0;
