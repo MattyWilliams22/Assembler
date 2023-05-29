@@ -32,12 +32,43 @@ typedef struct {
 
 state STATE;
 
+// Writing the state of the emulator to file
+void write_to_file(void) {
+  FILE *fp;
+
+  fp = fopen("output.out", "w");
+
+  // Print registers
+  fprintf(fp, "Registers:\n");
+  for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
+    fprintf(fp, "X%02d    = %016lx\n", i, STATE.registers[i]);
+  }
+
+  // Print PC
+  fprintf(fp, "PC     = %016lx\n", STATE.pc);
+
+  // Print PSTATE flags
+  fprintf(fp, "PSTATE : %c%c%c%c\n",
+         STATE.pstate.n ? 'N' : '-',
+         STATE.pstate.z ? 'Z' : '-',
+         STATE.pstate.c ? 'C' : '-',
+         STATE.pstate.v ? 'V' : '-');
+
+  // Print memory
+  fprintf(fp, "Non-Zero Memory:\n");
+  for (int i = 0; i < MEMORY_SIZE / sizeof(uint32_t); i++) {
+    if (STATE.memory[i] != 0) {
+      fprintf(fp, "0x%08lx : %08x\n", i * sizeof(uint32_t), STATE.memory[i]);
+    }
+  }
+}
+
 // Printing the output of the emulator
 void print_output(void) {
   // Print registers
   printf("Registers:\n");
   for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
-    printf("X%-2d    = %016lx\n", i, STATE.registers[i]);
+    printf("X%02d    = %016lx\n", i, STATE.registers[i]);
   }
 
   // Print PC
@@ -175,11 +206,16 @@ void data_processing_immediate(instruction instr) {
 
 }
 
+// Single Data Transfer
 void single_data_transfer(instruction instr) {
+  // Extract bit 31
+  byte load_lit = (instr >> 31) & 0x1;
   // Extract bit 30
   byte sf = (instr >> 24) & 0x1;
   // Extract bit 24
   byte U = (instr >> 24) & 0x1;
+  // Extract bit 22
+  byte L = (instr >> 22) & 0x1;
   // Extract bit 11
   byte I = (instr >> 11) & 0x1;
   // Extract bits 9 to 5
@@ -187,10 +223,50 @@ void single_data_transfer(instruction instr) {
   // Extract bits 4 to 0
   byte rt = instr  & 0x1f;
 
-  // Unsigned Immediate Offset
-  if (U == 1) {
-    // Extract bits 21 to 10
-    byte imm12 = (instr >> 10) & 0xfff;
+  reg address;
+
+  // Load Literal
+  if (load_lit == 0) {
+    // Extract bits 23 to 5
+    byte simm19 = (instr >> 5) & 0x7ffff;
+
+    STATE.registers[rt] = STATE.memory[STATE.pc + simm19];
+  } else {
+    // Unsigned Immediate Offset
+    if (U == 1) {
+      // Extract bits 21 to 10
+      byte imm12 = (instr >> 10) & 0xfff;
+
+      address = STATE.registers[xn] + imm12;
+    // Pre-Indexed
+    } else if (I == 1) {
+      // Extract bits 20 to 12
+      int simm9 = (instr >> 12) & 0x1ff;
+
+      address = STATE.registers[xn] + simm9;
+      STATE.registers[xn] = address;
+    // Post-Indexed
+    } else if (I == 0) {
+      // Extract bits 20 to 12
+      int simm9 = (instr >> 12) & 0x1ff;
+
+      address = STATE.registers[xn];
+      STATE.registers[xn] += simm9;
+    // Register Offset
+    } else {
+      // Extract bits 20 to 16
+      byte xm = (instr >> 16) & 0x1f;
+
+      address = STATE.registers[xn] + STATE.registers[xm];
+    }
+
+    // Load Instruction
+    if (L == 1) {
+      STATE.registers[rt] = STATE.memory[address];
+    // Store Instruction
+    } else {
+      STATE.memory[address] = STATE.registers[rt]; 
+    }
   }
 }
 
@@ -284,27 +360,30 @@ void process_instructions(void) {
       // Data Processing Instruction (Immediate)
       case 0:
         data_processing_immediate(instr);
+        STATE.pc += 4;
         break;
       // Branch
       case 1:
-
+        branch_instructions(instr);
         break;
       // Single Data Transfer
       case 2:
         single_data_transfer(instr);
+        STATE.pc += 4;
+
         break;
       // Data Processing Instruction (Register)
       case 3:
+        STATE.pc += 4;
 
         break;
-
-    }
-    
-    // Don't increment if next instruction is HALT
-    if (STATE.memory[i++] != HALT) {
-      STATE.pc += 4;
+      default:
+        STATE.pc += 4;
     }
   }
+
+  STATE.pstate.z = 1;
+  STATE.pc -= 4;
 
 }
 
@@ -333,6 +412,7 @@ int main(int argc, char **argv) {
   // Process all of the read-in instructions
   process_instructions();
 
+  write_to_file();
   print_output();
 
   return EXIT_SUCCESS;
