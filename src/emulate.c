@@ -226,9 +226,90 @@ void data_processing_register(instruction instr) {
   // Extract bits 4-0
   byte rd = instr & 0x1f;
 
-  reg result;
+  reg result = rn;
 
-  
+  // Logic and Arithmetic Instructions
+
+  if (M == 0) {
+    byte shift_type = (instr >> 22) & 0x3;
+    reg op2 = STATE.registers[rm];
+    
+    switch (shift_type) {
+      case 0x1:
+        // LSL
+        op2 = (sf ? (op2 << operand) : ((op2 << operand) & 0xffffffff));
+        break;
+      case 0x2:
+        // LSR
+        op2 = op2 >> operand;
+        break;
+      case 0x3:
+        // ASR
+        bool sign_bit = (op2 >> (sf ? 63 : 31)) & 0x1;
+        op2 = (op2 >> operand) | (sign_bit << ((sf ? 64 : 32) - operand));
+        break;
+      case 0x4:
+        // ROR
+        op2 = (op2 >> operand) | (op2 << ((sf ? 64 : 32) - operand));
+        break;
+    }
+
+    // Logical Instructions
+
+    if ((instr >> 24) & 0x1 == 0) {
+      bool N = (instr >> 21) & 0x1;
+      
+      switch (opc) {
+        case 0x0:
+          // AND + BIC
+          if (N == 0) {
+            result = STATE.registers[rn] & op2;
+          } else {
+            result = STATE.registers[rn] & ~op2;
+          }
+          break;
+        case 0x1:
+          // ORR + ORN
+          if (N == 0) {
+            result = STATE.registers[rn] | op2;
+          } else {
+            result = STATE.registers[rn] | ~op2;
+          }
+          break;
+        case 0x2:
+          // EOR + EON
+          if (N == 0) {
+            result = STATE.registers[rn] ^ op2;
+          } else {
+            result = STATE.registers[rn] ^ ~op2;
+          }
+          break;
+        case 0x3:
+          // ANDS + BICS
+          if (N == 0) {
+            result = STATE.registers[rn] & op2;
+          } else {
+            result = STATE.registers[rn] & ~op2;
+          }
+
+          //Update Condition Flags
+          STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
+          STATE.pstate.z = (result == 0);
+          STATE.pstate.c = 0;
+          STATE.pstate.v = 0;
+          break;
+      }
+
+    }
+
+    // Arithmetic Instructions
+
+    if (((instr >> 24) & 0x1 == 1) && ((instr >> 21) & 0x1 == 0)) {
+
+    }
+  }
+ 
+ 
 
 }
 
@@ -396,7 +477,6 @@ void process_instructions(void) {
       case 2:
         single_data_transfer(instr);
         STATE.pc += 4;
-
         break;
       // Data Processing Instruction (Register)
       case 3:
@@ -407,10 +487,8 @@ void process_instructions(void) {
         STATE.pc += 4;
     }
   }
-
   STATE.pstate.z = 1;
   STATE.pc -= 4;
-
 }
 
 int main(int argc, char **argv) {
