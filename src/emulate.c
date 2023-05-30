@@ -415,7 +415,6 @@ void single_data_transfer(instruction instr) {
     extended = (simm19 ^ mask) - mask;
 
     address = STATE.pc + (extended * 4);
-    //STATE.registers[rt] = STATE.memory[(STATE.pc + (extended * 4)) / 4];
   } else {
     // Unsigned Immediate Offset
     if (U == 1) {
@@ -440,7 +439,7 @@ void single_data_transfer(instruction instr) {
       // Extract bits 20 to 12
       int simm9 = (instr >> 12) & 0x1ff;
 
-      address = STATE.registers[xn] + simm9 * 4;
+      address = STATE.registers[xn] + simm9;
       STATE.registers[xn] = address;
     // Post-Indexed
     } else if (I == 0) {
@@ -473,7 +472,7 @@ void single_data_transfer(instruction instr) {
         // All 8 bytes stored at (address + 3) are to be stored in rt after the lowest (4 - mod) bytes
         reg result2 = (ext << ((4 - mod) * 8));
 
-        // The least significant (mod) bytes at (address + 7) are to be stored as the (8 - mod) most significant bytes
+        // The least significant (mod) bytes at (address + 7) are to be stored as the (mod) most significant bytes
         // in rt
         reg result3 = (ext1 << ((8 - mod) * 8));
 
@@ -504,7 +503,96 @@ void single_data_transfer(instruction instr) {
     }
   // Store Instruction
   } else {
-    STATE.memory[address / 4] = (sf ? STATE.registers[rt] : (STATE.registers[rt] & 0xffffffff)); 
+    if (sf == 1) {
+      reg result = STATE.registers[rt];
+
+      // If address isn't a multiple of 4 then will have to access 3 different memory addresses to get
+      // the whole 8 bytes to be stored
+      if (address % 4 != 0) {
+        // Least significiant (4 - mod) bytes in rt stored in the most significant (4 - mod) bytes of address
+        int mod = address % 4; // mod/4 of the way into address
+
+        // Need to create a mask to decide which bits of the address that we are writing to, to keep and which ones
+        // to overwrite. Any bits that we are not writing to should be kept as they were before
+        int mask;
+
+        if (mod == 1) {
+          mask = 0xff;
+        } else if (mod == 2) {
+          mask = 0xffff;
+        } else {
+          mask = 0xffffff;
+        }
+
+        STATE.memory[address / 4] = (result << (mod * 8)) | (STATE.memory[address / 4] & mask);
+
+        // The next 4 bytes after the least significant (4 - mod) bytes in rt are to be stored in (address + 4) 
+        STATE.memory[(address + 4) / 4] =  (result >> ((4 - mod) * 8) & 0xffffffff);
+
+        // Need to create a mask to decide which bits of the address that we are writing to, to keep and which ones
+        // to overwrite. Any bits that we are not writing to should be kept as they were before
+        int mask1;
+
+        if (mod == 1) {
+          mask1 = 0xffffff00;
+        } else if (mod == 2) {
+          mask1 = 0xffff0000;
+        } else {
+          mask1 = 0xff000000;
+        }
+
+        // The most significant (mod) bytes in rt are to be stored as the (mod) least significant bytes
+        // at (address + 8)
+        STATE.memory[(address + 4) / 4] =  (result >> ((8 - mod) * 8)) | (STATE.memory[(address + 4) / 4] & mask1);
+
+      // If address is a multiple of 4 then the 8 bytes to store from rt into memory need to be stored at
+      // the current address and the following address, the lower half of rt into the current, and the upper half
+      // into the following address
+      } else {
+        STATE.memory[address / 4] = result & 0xffffffff;
+        STATE.memory[(address + 4) / 4] = result >> 32;
+      }
+    } else {
+      // 32-bit access mode so we only want to use the lowest 32 bits of the register
+      reg result = STATE.registers[rt] & 0xffffffff;
+
+      if (address % 4 == 0) {
+        STATE.memory[address / 4] = result;
+      } else {
+        // Least significant (4 - mod) bytes in rt stored in the most significant (4 - mod) bytes of address
+        int mod = address % 4; // mod/4 of the way into address
+
+        // Need to create a mask to decide which bits of the address that we are writing to, to keep and which ones
+        // to overwrite. Any bits that we are not writing to should be kept as they were before
+        int mask;
+
+        if (mod == 1) {
+          mask = 0xff;
+        } else if (mod == 2) {
+          mask = 0xffff;
+        } else {
+          mask = 0xffffff;
+        }
+
+        STATE.memory[address / 4] = (result << (mod * 8)) | (STATE.memory[address / 4] & mask);
+
+        // Need to create a mask to decide which bits of the address that we are writing to, to keep and which ones
+        // to overwrite. Any bits that we are not writing to should be kept as they were before
+        int mask1;
+
+        if (mod == 1) {
+          mask1 = 0xffffff00;
+        } else if (mod == 2) {
+          mask1 = 0xffff0000;
+        } else {
+          mask1 = 0xff000000;
+        }
+
+        // The most significant (mod) bytes in rt are to be stored as the (mod) least significant bytes
+        // at (address + 4)
+        STATE.memory[(address + 4) / 4] = (result >> ((4 - mod) * 8)) | (STATE.memory[(address + 4) / 4] & mask1);
+      }
+    }
   }  
 }
 
@@ -617,6 +705,8 @@ void process_instructions(void) {
   int i = 0;
   instruction instr;
   int decoded;
+  
+  STATE.pstate.z = 1;
 
   while (STATE.memory[i] != HALT) {
     i = STATE.pc / 4;
@@ -650,7 +740,6 @@ void process_instructions(void) {
         break;
     }
   }
-  STATE.pstate.z = 1;
 }
 
 int main(int argc, char **argv) {
