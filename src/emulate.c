@@ -2,11 +2,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <string.h>
-#include <libgen.h>
 
 //Emulating A64 instructions
-
 #define NUMBER_OF_REGISTERS 31
 #define MEMORY_SIZE 2097152
 #define HALT 0x8a000000
@@ -36,10 +33,15 @@ typedef struct {
 state STATE;
 
 // Writing the state of the emulator to file
-void write_to_file(void) {
+void write_to_file(char* filename) {
   FILE *fp;
 
-  fp = fopen("output.out", "w");
+  fp = fopen(filename, "w");
+
+  if (fp == NULL) {
+    perror("Error writing to file!\n");
+    exit(EXIT_FAILURE);
+  }
 
   // Print registers
   fprintf(fp, "Registers:\n");
@@ -64,6 +66,8 @@ void write_to_file(void) {
       fprintf(fp, "0x%08lx : %08x\n", i * sizeof(uint32_t), STATE.memory[i]);
     }
   }
+
+  fclose(fp);
 }
 
 // Printing the output of the emulator
@@ -145,7 +149,7 @@ void data_processing_immediate(instruction instr) {
     // Extract bit 22
     byte sh = (instr >> 22) & 0x1;
     // Extract bits 21-10
-    byte imm12 = (instr >> 10) & 0xfff;
+    int imm12 = (instr >> 10) & 0xfff;
     // Extract bits 9-5
     byte rn = (instr >> 5) & 0x1f;
 
@@ -179,7 +183,9 @@ void data_processing_immediate(instruction instr) {
     }
 
     // Store the result in the destination register
-    STATE.registers[rd] = result;
+    if (rd != 31) {
+      STATE.registers[rd] = result;
+    }
   }
 
   // Wide Move - check opi is 101
@@ -187,9 +193,9 @@ void data_processing_immediate(instruction instr) {
     // Extract bit 22-21
     byte hw = (instr >> 21) & 0x3;
     // Extract bits 20-5
-    byte imm16 = (instr >> 5) & 0xffff;
+    int imm16 = (instr >> 5) & 0xffff;
     // Operand
-    byte operand = imm16 << (hw * 16);
+    int operand = imm16 << (hw * 16);
 
     // Calculate the result based on the opcode
     switch (opc) {
@@ -262,6 +268,7 @@ void data_processing_register(instruction instr) {
     if (((instr >> 24) & 0x1) == 0) {
       // Extract bit 21
       bool N = (instr >> 21) & 0x1;
+      
       
       switch (opc) {
         case 0x0:
@@ -343,16 +350,20 @@ void data_processing_register(instruction instr) {
     // Extract bits 14-10
     byte ra = (instr >> 10) & 0x1f;
 
-    if (ra == 0x1f) {
-      ra = 0x0;
-    }
-
     if (x == 0) {
       // MADD
-      result = STATE.registers[ra] + STATE.registers[rn] * STATE.registers[rm];
+      if (ra == 0x1f) {
+        result = STATE.registers[rn] * STATE.registers[rm];
+      } else {
+        result = STATE.registers[ra] + STATE.registers[rn] * STATE.registers[rm];
+      }
     } else {
       // MSUB
-      result = STATE.registers[ra] - STATE.registers[rn] - STATE.registers[rm];
+      if (ra == 0x1f) {
+        result = 0 - STATE.registers[rn] - STATE.registers[rm];
+      } else {
+        result = STATE.registers[ra] - STATE.registers[rn] - STATE.registers[rm];
+      }
     }
   }
   
@@ -366,17 +377,23 @@ void single_data_transfer(instruction instr) {
   // Extract bit 31
   byte load_lit = (instr >> 31) & 0x1;
   // Extract bit 30
-  byte sf = (instr >> 24) & 0x1;
+  byte sf = (instr >> 30) & 0x1;
   // Extract bit 24
   byte U = (instr >> 24) & 0x1;
   // Extract bit 22
   byte L = (instr >> 22) & 0x1;
+  // Extract bits 15 to 10
+  byte reg_offset = (instr >> 10) & 0x3f;
   // Extract bit 11
   byte I = (instr >> 11) & 0x1;
   // Extract bits 9 to 5
   byte xn = (instr >> 5) & 0x1f;
   // Extract bits 4 to 0
   byte rt = instr  & 0x1f;
+
+  bool sign_bit;
+  int mask;
+  int extended;
 
   reg address;
 
@@ -386,24 +403,35 @@ void single_data_transfer(instruction instr) {
     int simm19 = (instr >> 5) & 0x7ffff;
 
     // Sign extend to 64 bits
-    bool sign_bit = (simm19 >> 18) & 0x1;
-    int mask = sign_bit << 18;
-    int extended = (simm19 ^ mask) - mask;
+    sign_bit = (simm19 >> 18) & 0x1;
+    mask = sign_bit << 18;
+    extended = (simm19 ^ mask) - mask;
 
     STATE.registers[rt] = STATE.memory[(STATE.pc + (extended * 4)) / 4];
   } else {
     // Unsigned Immediate Offset
     if (U == 1) {
       // Extract bits 21 to 10
-      byte imm12 = (instr >> 10) & 0xfff;
+      int imm12 = (instr >> 10) & 0xfff;
 
-      address = STATE.registers[xn] + imm12;
+      // Zero extend to 64 bits
+      sign_bit = (imm12 >> 11) & 0x1;
+      mask = sign_bit << 11;
+      extended = (imm12 ^ mask) - mask;
+
+      address = STATE.registers[xn] + extended;
+    // Register Offset
+    } else if (reg_offset == 0x1a) {
+      // Extract bits 20 to 16
+      byte xm = (instr >> 16) & 0x1f;
+
+      address = STATE.registers[xn] + STATE.registers[xm];
     // Pre-Indexed
     } else if (I == 1) {
       // Extract bits 20 to 12
       int simm9 = (instr >> 12) & 0x1ff;
 
-      address = STATE.registers[xn] + simm9;
+      address = STATE.registers[xn] + simm9 * 4;
       STATE.registers[xn] = address;
     // Post-Indexed
     } else if (I == 0) {
@@ -412,20 +440,65 @@ void single_data_transfer(instruction instr) {
 
       address = STATE.registers[xn];
       STATE.registers[xn] += simm9;
-    // Register Offset
-    } else {
-      // Extract bits 20 to 16
-      byte xm = (instr >> 16) & 0x1f;
-
-      address = STATE.registers[xn] + STATE.registers[xm];
     }
+
+    sf = 0;
 
     // Load Instruction
     if (L == 1) {
-      STATE.registers[rt] = (sf ? STATE.memory[address] : (STATE.memory[address] & 0xffffffff));
+      if (sf == 1) {
+        // If address isn't a multiple of 4 then will have to access 3 different memory addresses to get
+        // the whole 8 bytes to load in
+        if (address % 4 != 0) {
+          // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
+          int mod = address % 4; // mod/4 of the way into address
+          reg result1 = (STATE.memory[address / 4] >> (mod * 8));
+
+          // Zero extend to 64 bits the 8 bytes stored at (address + 3)
+          mask = 0 << 31;
+          long int ext = (STATE.memory[(address + 3) / 4] ^ mask) - mask;
+
+          // Zero extend to 64 bits the least significant ((mod * 8) - 1) bytes stored at (address + 7)
+          mask = 0 << ((mod * 8) - 1);
+          long int ext1 = (STATE.memory[(address + 7) / 4] ^ mask) - mask;
+        
+          // All 8 bytes stored at (address + 3) are to be stored in rt after the lowest (4 - mod) bytes
+          reg result2 = (ext << ((4 - mod) * 8));
+
+          // The least significant (mod) bytes at (address + 7) are to be stored as the (8 - mod) most significant bytes
+          // in rt
+          reg result3 = (ext1 << ((8 - mod) * 8));
+
+          STATE.registers[rt] = result1 | result2 | result3;
+        // If address is a multiple of 4 then the 8 bytes to load in are in the current address and the next one,
+        // so only two memory addresses to be accessed
+        } else {
+          // Zero extend all 8 bytes at next address to 64 bits
+          mask = 0 << 31;
+          long int ext = (STATE.memory[(address + 4) / 4] ^ mask) - mask;
+
+          STATE.registers[rt] = STATE.memory[address / 4] | (ext << 32);
+        }
+        
+      } else {
+        if (address % 4 == 0) {
+          STATE.registers[rt] = STATE.memory[address];
+        } else {
+          // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
+          int mod = address % 4; // mod/4 of the way into address
+          reg result1 = (STATE.memory[address / 4] >> (mod * 8));
+
+          // The least significant (mod) bytes at (address + 4) are to be stored as the (8 - mod) most significant bytes
+          // in rt
+          reg result2 = (STATE.memory[(address + 4) / 4] << ((8 - mod) * 8));
+
+          STATE.registers[rt] = result1 | result2;
+
+        }
+      }
     // Store Instruction
     } else {
-      STATE.memory[address] = (sf ? STATE.registers[rt] : (STATE.registers[rt] & 0xffffffff)); 
+      STATE.memory[address / 4] = (sf ? STATE.registers[rt] : (STATE.registers[rt] & 0xffffffff)); 
     }
   }
 }
@@ -437,8 +510,14 @@ void branch_instructions(instruction instr) {
     // Unconditional
     case 0x5:
       // Extract bits 25 to 0
-      byte simm26 = instr & 0x3ffffff;
-      STATE.pc = STATE.pc + simm26 * 4;
+      int simm26 = instr & 0x3ffffff;
+
+      // Sign extend to 64 bits
+      bool s_b = (simm26 >> 25) & 0x1;
+      int m = s_b << 25;
+      int ext = (simm26 ^ m) - m;
+
+      STATE.pc = STATE.pc + ext * 4;
       break;
     case 0x35:
       // Extract bits 9 to 5
@@ -447,54 +526,60 @@ void branch_instructions(instruction instr) {
       break;
     case 0x15:
       // Extract bits 23 to 5
-      byte simm19 = (instr >> 5) & 0x7ffff;
+      int simm19 = (instr >> 5) & 0x7ffff;
+
+      // Sign extend to 64 bits
+      bool sign_bit = (simm19 >> 18) & 0x1;
+      int mask = sign_bit << 18;
+      int extended = (simm19 ^ mask) - mask;
+
       // Extract bits 3 to 0
       byte cond = instr & 0xf;
       switch (cond) {
         case 0x0:
           if (STATE.pstate.z == 1) {
-           STATE.pc = STATE.pc + simm19 * 4;
+            STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
         case 0x1:
           if (STATE.pstate.z == 0) {
-            STATE.pc = STATE.pc + simm19 * 4;
+            STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
         case 0xa:
           if (STATE.pstate.n == 1) {
-            STATE.pc = STATE.pc + simm19 * 4;
+            STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
         case 0xb:
           if (STATE.pstate.n != 1) {
-            STATE.pc = STATE.pc + simm19 * 4;
+            STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
         case 0xc:
           if (STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v) {
-            STATE.pc = STATE.pc + simm19 * 4;
+            STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
         case 0xd:
           if (!(STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v)) {
-            STATE.pc = STATE.pc + simm19 * 4;
+            STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
         case 0xe:
-          STATE.pc = STATE.pc + simm19 * 4;
+          STATE.pc = STATE.pc + extended * 4;
           break;
       }
   }
@@ -561,8 +646,8 @@ void process_instructions(void) {
 
 int main(int argc, char **argv) {
 
-  if (argc != 2) {
-    printf("Usage: ./emulate <filename>\n");
+  if (argc != 3) {
+    printf("Usage: ./emulate <input-filename> <output-filename>\n");
     return EXIT_FAILURE;
   }
 
@@ -584,7 +669,8 @@ int main(int argc, char **argv) {
   // Process all of the read-in instructions
   process_instructions();
 
-  write_to_file();
+  // Write the state of the memory to file
+  write_to_file(argv[2]);
   print_output();
 
   return EXIT_SUCCESS;
