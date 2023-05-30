@@ -248,7 +248,13 @@ void data_processing_register(instruction instr) {
   if (M == 0) {
     // Extract bits 23-22
     byte shift_type = (instr >> 22) & 0x3;
-    reg op2 = STATE.registers[rm];
+    reg op2;
+
+    if (rm == 31) {
+      op2 = 0;
+    } else {
+      op2 = STATE.registers[rm];
+    }
     
     switch (shift_type) {
       case 0x1:
@@ -275,39 +281,40 @@ void data_processing_register(instruction instr) {
     if (((instr >> 24) & 0x1) == 0) {
       // Extract bit 21
       bool N = (instr >> 21) & 0x1;
+      long int op1 = (rn == 31 ? 0 : STATE.registers[rn]);
       
       
       switch (opc) {
         case 0x0:
           // AND + BIC
           if (N == 0) {
-            result = STATE.registers[rn] & op2;
+            result = op1 & op2;
           } else {
-            result = STATE.registers[rn] & ~op2;
+            result = op1 & ~op2;
           }
           break;
         case 0x1:
           // ORR + ORN
           if (N == 0) {
-            result = STATE.registers[rn] | op2;
+            result = op1 | op2;
           } else {
-            result = STATE.registers[rn] | ~op2;
+            result = op1 | ~op2;
           }
           break;
         case 0x2:
           // EOR + EON
           if (N == 0) {
-            result = STATE.registers[rn] ^ op2;
+            result = op1 ^ op2;
           } else {
-            result = STATE.registers[rn] ^ ~op2;
+            result = op1 ^ ~op2;
           }
           break;
         case 0x3:
           // ANDS + BICS
           if (N == 0) {
-            result = STATE.registers[rn] & op2;
+            result = op1 & op2;
           } else {
-            result = STATE.registers[rn] & ~op2;
+            result = op1 & ~op2;
           }
 
           //Update Condition Flags
