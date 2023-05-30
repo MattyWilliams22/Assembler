@@ -407,7 +407,8 @@ void single_data_transfer(instruction instr) {
     mask = sign_bit << 18;
     extended = (simm19 ^ mask) - mask;
 
-    STATE.registers[rt] = STATE.memory[(STATE.pc + (extended * 4)) / 4];
+    address = STATE.pc + (extended * 4);
+    //STATE.registers[rt] = STATE.memory[(STATE.pc + (extended * 4)) / 4];
   } else {
     // Unsigned Immediate Offset
     if (U == 1) {
@@ -441,63 +442,62 @@ void single_data_transfer(instruction instr) {
       address = STATE.registers[xn];
       STATE.registers[xn] += simm9;
     }
-
-    // Load Instruction
-    if (L == 1) {
-      if (sf == 1) {
-        // If address isn't a multiple of 4 then will have to access 3 different memory addresses to get
-        // the whole 8 bytes to load in
-        if (address % 4 != 0) {
-          // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
-          int mod = address % 4; // mod/4 of the way into address
-          reg result1 = (STATE.memory[address / 4] >> (mod * 8));
-
-          // Zero extend to 64 bits the 8 bytes stored at (address + 3)
-          mask = 0 << 31;
-          long int ext = (STATE.memory[(address + 3) / 4] ^ mask) - mask;
-
-          // Zero extend to 64 bits the least significant ((mod * 8) - 1) bytes stored at (address + 7)
-          mask = 0 << ((mod * 8) - 1);
-          long int ext1 = (STATE.memory[(address + 7) / 4] ^ mask) - mask;
-        
-          // All 8 bytes stored at (address + 3) are to be stored in rt after the lowest (4 - mod) bytes
-          reg result2 = (ext << ((4 - mod) * 8));
-
-          // The least significant (mod) bytes at (address + 7) are to be stored as the (8 - mod) most significant bytes
-          // in rt
-          reg result3 = (ext1 << ((8 - mod) * 8));
-
-          STATE.registers[rt] = result1 | result2 | result3;
-        // If address is a multiple of 4 then the 8 bytes to load in are in the current address and the next one,
-        // so only two memory addresses to be accessed
-        } else {
-          // Zero extend all 8 bytes at next address to 64 bits
-          mask = 0 << 31;
-          long int ext = (STATE.memory[(address + 4) / 4] ^ mask) - mask;
-
-          STATE.registers[rt] = STATE.memory[address / 4] | (ext << 32);
-        }
-        
-      } else {
-        if (address % 4 == 0) {
-          STATE.registers[rt] = STATE.memory[address];
-        } else {
-          // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
-          int mod = address % 4; // mod/4 of the way into address
-          reg result1 = (STATE.memory[address / 4] >> (mod * 8));
-
-          // The least significant (mod) bytes at (address + 4) are to be stored as the (8 - mod) most significant bytes
-          // in rt
-          reg result2 = (STATE.memory[(address + 4) / 4] << ((8 - mod) * 8));
-
-          STATE.registers[rt] = result1 | result2;
-        }
-      }
-    // Store Instruction
-    } else {
-      STATE.memory[address / 4] = (sf ? STATE.registers[rt] : (STATE.registers[rt] & 0xffffffff)); 
-    }
   }
+
+  // Load Instruction
+  if (L == 1 || load_lit == 0) {
+    if (sf == 1) {
+      // If address isn't a multiple of 4 then will have to access 3 different memory addresses to get
+      // the whole 8 bytes to load in
+      if (address % 4 != 0) {
+        // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
+        int mod = address % 4; // mod/4 of the way into address
+        reg result1 = (STATE.memory[address / 4] >> (mod * 8));
+
+        // Zero extend to 64 bits the 8 bytes stored at (address + 3)
+        mask = 0 << 31;
+        long int ext = (STATE.memory[(address + 3) / 4] ^ mask) - mask;
+
+        // Zero extend to 64 bits the least significant ((mod * 8) - 1) bytes stored at (address + 7)
+        mask = 0 << ((mod * 8) - 1);
+        long int ext1 = (STATE.memory[(address + 7) / 4] ^ mask) - mask;
+        
+        // All 8 bytes stored at (address + 3) are to be stored in rt after the lowest (4 - mod) bytes
+        reg result2 = (ext << ((4 - mod) * 8));
+
+        // The least significant (mod) bytes at (address + 7) are to be stored as the (8 - mod) most significant bytes
+        // in rt
+        reg result3 = (ext1 << ((8 - mod) * 8));
+
+        STATE.registers[rt] = result1 | result2 | result3;
+      // If address is a multiple of 4 then the 8 bytes to load in are in the current address and the next one,
+      // so only two memory addresses to be accessed
+      } else {
+        // Zero extend all 8 bytes at next address to 64 bits
+        mask = 0 << 31;
+        long int ext = (STATE.memory[(address + 4) / 4] ^ mask) - mask;
+
+        STATE.registers[rt] = STATE.memory[address / 4] | (ext << 32);
+      }
+    } else {
+      if (address % 4 == 0) {
+        STATE.registers[rt] = STATE.memory[address];
+      } else {
+        // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
+        int mod = address % 4; // mod/4 of the way into address
+        reg result1 = (STATE.memory[address / 4] >> (mod * 8));
+
+        // The least significant (mod) bytes at (address + 4) are to be stored as the (8 - mod) most significant bytes
+        // in rt
+        reg result2 = (STATE.memory[(address + 4) / 4] << ((8 - mod) * 8));
+
+        STATE.registers[rt] = result1 | result2;
+      }
+    }
+  // Store Instruction
+  } else {
+    STATE.memory[address / 4] = (sf ? STATE.registers[rt] : (STATE.registers[rt] & 0xffffffff)); 
+  }  
 }
 
 void branch_instructions(instruction instr) {
