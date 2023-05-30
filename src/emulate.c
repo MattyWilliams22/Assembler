@@ -550,7 +550,7 @@ void single_data_transfer(instruction instr) {
 
         // The most significant (mod) bytes in rt are to be stored as the (mod) least significant bytes
         // at (address + 8)
-        STATE.memory[(address + 4) / 4] =  (result >> ((8 - mod) * 8)) | (STATE.memory[(address + 4) / 4] & mask1);
+        STATE.memory[(address + 8) / 4] =  (result >> ((8 - mod) * 8)) | (STATE.memory[(address + 8) / 4] & mask1);
 
       // If address is a multiple of 4 then the 8 bytes to store from rt into memory need to be stored at
       // the current address and the following address, the lower half of rt into the current, and the upper half
@@ -581,7 +581,9 @@ void single_data_transfer(instruction instr) {
           mask = 0xffffff;
         }
 
+        printf("%x", STATE.memory[address / 4]);
         STATE.memory[address / 4] = (result << (mod * 8)) | (STATE.memory[address / 4] & mask);
+        printf("%x", STATE.memory[address / 4]);
 
         // Need to create a mask to decide which bits of the address that we are writing to, to keep and which ones
         // to overwrite. Any bits that we are not writing to should be kept as they were before
