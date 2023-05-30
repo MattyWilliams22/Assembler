@@ -199,9 +199,9 @@ void data_processing_immediate(instruction instr) {
     // Extract bit 22-21
     byte hw = (instr >> 21) & 0x3;
     // Extract bits 20-5
-    int imm16 = (instr >> 5) & 0xffff;
+    uint64_t imm16 = (instr >> 5) & 0xffff;
     // Operand
-    int operand = imm16 << (hw * 16);
+    uint64_t operand = imm16 << (hw * 16);
 
     // Calculate the result based on the opcode
     switch (opc) {
@@ -215,7 +215,8 @@ void data_processing_immediate(instruction instr) {
         break;
       case 0x3:
         // MOVK
-        STATE.registers[rd] = (STATE.registers[rd] & ~(0xffff << (hw * 16))) | (imm16 << (hw * 16));
+        uint64_t mask = 0xffff;
+        STATE.registers[rd] = (STATE.registers[rd] & ~(mask << (hw * 16))) | (imm16 << (hw * 16));
         break;
     }
   }
@@ -425,8 +426,9 @@ void single_data_transfer(instruction instr) {
       sign_bit = (imm12 >> 11) & 0x1;
       mask = sign_bit << 11;
       extended = (imm12 ^ mask) - mask;
+    
 
-      address = STATE.registers[xn] + extended;
+      address = STATE.registers[xn] + (extended * 8);
     // Register Offset
     } else if (reg_offset == 0x1a) {
       // Extract bits 20 to 16
@@ -646,7 +648,6 @@ void process_instructions(void) {
       case 4:
         STATE.pc += 4;
         break;
-      default:
     }
   }
   STATE.pstate.z = 1;
