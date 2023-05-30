@@ -283,7 +283,6 @@ void data_processing_register(instruction instr) {
       bool N = (instr >> 21) & 0x1;
       long int op1 = (rn == 31 ? 0 : STATE.registers[rn]);
       
-      
       switch (opc) {
         case 0x0:
           // AND + BIC
@@ -640,6 +639,7 @@ void branch_instructions(instruction instr) {
       // Extract bits 3 to 0
       byte cond = instr & 0xf;
       switch (cond) {
+        // EQ
         case 0x0:
           if (STATE.pstate.z == 1) {
             STATE.pc = STATE.pc + extended * 4;
@@ -647,6 +647,7 @@ void branch_instructions(instruction instr) {
             STATE.pc += 4;
           }
           break;
+        // NE
         case 0x1:
           if (STATE.pstate.z == 0) {
             STATE.pc = STATE.pc + extended * 4;
@@ -654,20 +655,23 @@ void branch_instructions(instruction instr) {
             STATE.pc += 4;
           }
           break;
+        // GE
         case 0xa:
-          if (STATE.pstate.n == 1) {
+          if (STATE.pstate.n == STATE.pstate.v) {
             STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
+        // LT
         case 0xb:
-          if (STATE.pstate.n != 1) {
+          if (STATE.pstate.n != STATE.pstate.v) {
             STATE.pc = STATE.pc + extended * 4;
           } else {
             STATE.pc += 4;
           }
           break;
+        // GT
         case 0xc:
           if (STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v) {
             STATE.pc = STATE.pc + extended * 4;
@@ -675,6 +679,7 @@ void branch_instructions(instruction instr) {
             STATE.pc += 4;
           }
           break;
+        // LE
         case 0xd:
           if (!(STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v)) {
             STATE.pc = STATE.pc + extended * 4;
@@ -682,6 +687,7 @@ void branch_instructions(instruction instr) {
             STATE.pc += 4;
           }
           break;
+        // AL
         case 0xe:
           STATE.pc = STATE.pc + extended * 4;
           break;
