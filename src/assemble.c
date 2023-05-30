@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // Aliases for types
 
@@ -58,17 +59,53 @@ void remove_from_table(Symbol_Table *table, Key key) {
   }
 }
 
+// Finding in Symbol Table
+Value find_in_table(Symbol_Table *table, Key key) {
+  Node *current = table->head;
+  while (current != NULL) {
+    if (strcmp(current->key, key) == 0) {
+      return current->value;
+    }
+    current = current->next;
+  }
+  return -1;
+}
+
+// Freeing Symbol Table
+void free_table(Symbol_Table *table) {
+  Node *current = table->head;
+  Node *next = NULL;
+  while (current != NULL) {
+    next = current->next;
+    free(current);
+    current = next;
+  }
+  table->head = NULL;
+}
+
+// Check existence of key in Symbol Table
+bool exists_in_table(Symbol_Table *table, Key key) {
+  Node *current = table->head;
+  while (current != NULL) {
+    if (strcmp(current->key, key) == 0) {
+      return true;
+    }
+    current = current->next;
+  }
+  return false;
+}
+
 int main(int argc, char **argv) {
 
   FILE* input = fopen(argv[1], "rt");
 	if (input == NULL) {
-		perror("Could not open input file. Terminating.");
+		perror("Could not open input file.");
 		exit(EXIT_FAILURE);
 	}
 
 	FILE* output = fopen(argv[2], "wb+");
 	if (output == NULL) {
-		perror("Could not open output file. Terminating.");
+		perror("Could not open output file.");
 		exit(EXIT_FAILURE);
 	}
 
