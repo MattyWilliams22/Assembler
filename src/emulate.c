@@ -7,6 +7,7 @@
 #define NUMBER_OF_REGISTERS 31
 #define MEMORY_SIZE 2097152
 #define HALT 0x8a000000
+#define NOOP 0xd503201f
 
 // Readable aliases for types
 typedef uint64_t reg;
@@ -102,6 +103,7 @@ enum instr_type {
   BRANCHES,
   SINGLE_DATA_TRANSFER,
   DATA_PROCESSING_REGISTER,
+  NOP,
   UNRECOGNISED
 };
 
@@ -109,6 +111,10 @@ enum instr_type {
 int decode(instruction instr) {
   // Extract bits 28 to 25
   byte bits_28_to_25 = (instr >> 25) & 0xf;
+
+  if (instr == NOOP) {
+    return NOP;
+  }
 
   // Decode instruction
   switch (bits_28_to_25) {
@@ -516,11 +522,13 @@ void branch_instructions(instruction instr) {
 
       STATE.pc = STATE.pc + ext * 4;
       break;
+    // Register
     case 0x35:
       // Extract bits 9 to 5
       byte xn = (instr >> 5) & 0x1f;
       STATE.pc = xn;
       break;
+    // Conditional
     case 0x15:
       // Extract bits 23 to 5
       int simm19 = (instr >> 5) & 0x7ffff;
@@ -634,6 +642,9 @@ void process_instructions(void) {
           data_processing_register(instr);
           STATE.pc += 4;
         }
+        break;
+      case 4:
+        STATE.pc += 4;
         break;
       default:
     }
