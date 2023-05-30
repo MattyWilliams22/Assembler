@@ -442,8 +442,6 @@ void single_data_transfer(instruction instr) {
       STATE.registers[xn] += simm9;
     }
 
-    sf = 0;
-
     // Load Instruction
     if (L == 1) {
       if (sf == 1) {
@@ -493,7 +491,6 @@ void single_data_transfer(instruction instr) {
           reg result2 = (STATE.memory[(address + 4) / 4] << ((8 - mod) * 8));
 
           STATE.registers[rt] = result1 | result2;
-
         }
       }
     // Store Instruction
