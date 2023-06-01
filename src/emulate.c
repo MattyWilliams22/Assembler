@@ -684,19 +684,11 @@ void branch_instructions(instruction instr) {
           break;
         // GE
         case 0xa:
-          if (STATE.pstate.n == 1) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = STATE.pstate.n == STATE.pstate.v;
           break;
         // LT
         case 0xb:
-          if (STATE.pstate.n != 1) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = STATE.pstate.n != STATE.pstate.v;
           break;
         // GT
         case 0xc:
