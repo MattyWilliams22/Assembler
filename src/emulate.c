@@ -124,7 +124,6 @@ void process_instructions(void) {
         } 
       }
     } else {
-      printf("%x", instr);
       perror("Invalid Instruction Detected!\n");
       exit(EXIT_FAILURE);
     }
@@ -266,18 +265,20 @@ void data_processing_register(instruction instr) {
         break;
       case 0x2:
         // ASR
-        bool sign_bit = (op2 >> (sf ? 63 : 31)) & 0x1;
+        long int sign_bit = (op2 >> (sf ? 63 : 31)) & 0x1;
         
-        op2 = (op2 >> operand) | (sign_bit << ((sf ? 63 : 31) - (op2 >> operand)));
+        op2 = (op2 >> operand);
 
         // Sign extend
-        long int mask = sign_bit << (sf ? 63 : 31);
+        long int mask = sign_bit << ((sf ? 63 : 31) - operand);
         op2 = (op2 ^ mask) - mask;
 
         break;
       case 0x3:
         // ROR
-        op2 = (op2 >> operand) | (op2 << ((sf ? 63 : 31) - (op2 >> operand)));
+        reg rotated = op2 << ((sf ? 64 : 32) - operand);
+
+        op2 = (op2 >> operand) | rotated;
         break;
     }
 
@@ -792,9 +793,7 @@ int main(int argc, char **argv) {
     }
 
     return EXIT_SUCCESS;
-  }
-
-  if (argc != 3) {
+  } else {
     printf("Usage: ./emulate <input-filename> <output-filename>\n");
     return EXIT_FAILURE;
   }
