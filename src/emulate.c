@@ -674,24 +674,39 @@ void branch_instructions(instruction instr) {
       bool condition;
 
       switch (cond) {
+        // EQ
         case 0x0:
           condition = (STATE.pstate.z == 1);
           break;
+        // NE
         case 0x1:
           condition = (STATE.pstate.z == 0);
           break;
+        // GE
         case 0xa:
-          condition = (STATE.pstate.n == 1);
+          if (STATE.pstate.n == 1) {
+            STATE.pc = STATE.pc + extended * 4;
+          } else {
+            STATE.pc += 4;
+          }
           break;
+        // LT
         case 0xb:
-          condition = (STATE.pstate.n != 1);
+          if (STATE.pstate.n != 1) {
+            STATE.pc = STATE.pc + extended * 4;
+          } else {
+            STATE.pc += 4;
+          }
           break;
+        // GT
         case 0xc:
           condition = (STATE.pstate.z == 0) && (STATE.pstate.n == STATE.pstate.v);
           break;
+        // LE
         case 0xd:
           condition = !(STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v);
           break;
+        // AL
         case 0xe:
           condition = true;
           break;
