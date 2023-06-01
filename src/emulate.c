@@ -3,16 +3,27 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+// Readable aliases for types
+typedef uint64_t reg;
+typedef uint8_t byte;
+typedef uint32_t instruction;
+
+// Prototypes
+void write_to_file(char* filename);
+void print_output(void);
+int decode(instruction instr);
+void data_processing_immediate(instruction instr);
+void data_processing_register(instruction instr);
+void single_data_transfer(instruction instr);
+void branch_instructions(instruction instr);
+void initialise_memory(void);
+void process_instructions(void);
+
 //Emulating A64 instructions
 #define NUMBER_OF_REGISTERS 31
 #define MEMORY_SIZE 2097152
 #define HALT 0x8a000000
 #define NOOP 0xd503201f
-
-// Readable aliases for types
-typedef uint64_t reg;
-typedef uint8_t byte;
-typedef uint32_t instruction;
 
 // Modelling Pstate
 typedef struct {
@@ -31,81 +42,37 @@ typedef struct {
   uint32_t memory[MEMORY_SIZE];
 } state;
 
-state STATE;
-
-// Writing the state of the emulator to file
-void write_to_file(char* filename) {
-  FILE *fp;
-
-  fp = fopen(filename, "w");
-
-  if (fp == NULL) {
-    perror("Error writing to file!\n");
-    exit(EXIT_FAILURE);
-  }
-
-  // Print registers
-  fprintf(fp, "Registers:\n");
-  for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
-    fprintf(fp, "X%02d    = %016lx\n", i, STATE.registers[i]);
-  }
-
-  // Print PC
-  fprintf(fp, "PC     = %016lx\n", STATE.pc);
-
-  // Print PSTATE flags
-  fprintf(fp, "PSTATE : %c%c%c%c\n",
-         STATE.pstate.n ? 'N' : '-',
-         STATE.pstate.z ? 'Z' : '-',
-         STATE.pstate.c ? 'C' : '-',
-         STATE.pstate.v ? 'V' : '-');
-
-  // Print memory
-  fprintf(fp, "Non-Zero Memory:\n");
-  for (int i = 0; i < MEMORY_SIZE / sizeof(uint32_t); i++) {
-    if (STATE.memory[i] != 0) {
-      fprintf(fp, "0x%08lx : %08x\n", i * sizeof(uint32_t), STATE.memory[i]);
-    }
-  }
-
-  fclose(fp);
-}
-
-// Printing the output of the emulator
-void print_output(void) {
-  // Print registers
-  printf("Registers:\n");
-  for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
-    printf("X%02d    = %016lx\n", i, STATE.registers[i]);
-  }
-
-  // Print PC
-  printf("PC     = %016lx\n", STATE.pc);
-
-  // Print PSTATE flags
-  printf("PSTATE : %c%c%c%c\n",
-         STATE.pstate.n ? 'N' : '-',
-         STATE.pstate.z ? 'Z' : '-',
-         STATE.pstate.c ? 'C' : '-',
-         STATE.pstate.v ? 'V' : '-');
-
-  // Print memory
-  printf("Non-Zero Memory:\n");
-  for (int i = 0; i < MEMORY_SIZE / sizeof(uint32_t); i++) {
-    if (STATE.memory[i] != 0) {
-      printf("0x%08lx : %08x\n", i * sizeof(uint32_t), STATE.memory[i]);
-    }
-  }
-}
-
 enum instr_type {
   DATA_PROCESSING_IMMEDIATE,
-  BRANCHES,
-  SINGLE_DATA_TRANSFER,
   DATA_PROCESSING_REGISTER,
+  SINGLE_DATA_TRANSFER,
+  BRANCHES,
   NOP,
   UNRECOGNISED
 };
+
+state STATE;
+
+void initialise_memory(void) {
+  // Set program counter to 0
+  STATE.pc = 0;
+
+  // Set zero register to 0
+  STATE.zr = 0;
+
+  // Initialise the pstate
+  STATE.pstate = (pstate) {.n = 0, .z = 0, .c = 0, .v = 0};
+  
+  // Set all registers to 0
+  for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
+    STATE.registers[i] = 0;
+  }
+
+  // Set all memory to 0
+  for (int i = 0; i < MEMORY_SIZE; i++) {
+    STATE.memory[i] = 0;
+  }
+}
 
 // Decode instruction using bits 28 to 25 in instruction.
 int decode(instruction instr) {
@@ -139,6 +106,48 @@ int decode(instruction instr) {
   }
 }
 
+void process_instructions(void) {
+  int i = 0;
+  instruction instr;
+  int decoded;
+  
+  STATE.pstate.z = 1;
+
+  while (STATE.memory[i] != HALT) {
+    i = STATE.pc / 4;
+    instr = STATE.memory[i];
+    decoded = decode(instr);
+
+    switch(decoded) {
+      // Data Processing Instruction (Immediate)
+      case 0:
+        data_processing_immediate(instr);
+        STATE.pc += 4;
+        break;
+      // Data Processing Instruction (Register)
+      case 1:
+        if (instr != HALT) {
+          data_processing_register(instr);
+          STATE.pc += 4;
+        }
+        break;
+      // Single Data Transfer Instruction
+      case 2:
+        single_data_transfer(instr);
+        STATE.pc += 4;
+        break;
+      // Branch Instruction
+      case 3:
+        branch_instructions(instr);
+        break;
+      // NOP Instruction
+      case 4:
+        STATE.pc += 4;
+        break;
+    }
+  }
+}
+
 // Data Processing Immediate
 void data_processing_immediate(instruction instr) {
   // Extract bit 31
@@ -155,36 +164,38 @@ void data_processing_immediate(instruction instr) {
     // Extract bit 22
     byte sh = (instr >> 22) & 0x1;
     // Extract bits 21-10
-    int imm12 = (instr >> 10) & 0xfff;
+    uint64_t imm12 = (instr >> 10) & 0xfff;
     // Extract bits 9-5
     byte rn = (instr >> 5) & 0x1f;
+
+    uint64_t op = imm12 << 12;
 
     reg result;
 
     // Calculate the result based on the opcode
     switch (opc) {
       case 0x0:  // ADD
-        result = STATE.registers[rn] + (sh ? (imm12 << 12) : imm12);
+        result = STATE.registers[rn] + (sh ? op : imm12);
         break;
 
       case 0x1:  // ADDS
-        result = STATE.registers[rn] + (sh ? (imm12 << 12) : imm12);
+        result = STATE.registers[rn] + (sh ? op : imm12);
         STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
         STATE.pstate.z = (result == 0);
         STATE.pstate.c = (result < STATE.registers[rn]);
-        STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ (sh ? (imm12 << 12) : imm12)) >> (sf ? 63 : 31)) & 0x1);
+        STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
         break;
 
       case 0x2:  // SUB
-        result = STATE.registers[rn] - (sh ? (imm12 << 12) : imm12);
+        result = STATE.registers[rn] - (sh ? op : imm12);
         break;
 
       case 0x3:  // SUBS
-        result = STATE.registers[rn] - (sh ? (imm12 << 12) : imm12);
+        result = STATE.registers[rn] - (sh ? op : imm12);
         STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
         STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (STATE.registers[rn] >= (sh ? (imm12 << 12) : imm12));
-        STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ (sh ? (imm12 << 12) : imm12)) >> (sf ? 63 : 31)) & 0x1);
+        STATE.pstate.c = (STATE.registers[rn] >= (sh ? op : imm12));
+        STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
         break;
     }
 
@@ -250,16 +261,21 @@ void data_processing_register(instruction instr) {
     byte shift_type = (instr >> 22) & 0x3;
     reg op2;
 
+    // Check if encodes zero register
     if (rm == 31) {
       op2 = 0;
     } else {
-      op2 = STATE.registers[rm];
+      if (sf == 0) { // 32-bit accesss mode
+        op2 = STATE.registers[rm] & 0xffffffff;
+      } else { // 64-bit access mode
+        op2 = STATE.registers[rm];
+      }
     }
     
     switch (shift_type) {
       case 0x1:
         // LSL
-        op2 = (sf ? (op2 << operand) : ((op2 << operand) & 0xffffffff));
+        op2 = op2 << operand;
         break;
       case 0x2:
         // LSR
@@ -281,8 +297,13 @@ void data_processing_register(instruction instr) {
     if (((instr >> 24) & 0x1) == 0) {
       // Extract bit 21
       bool N = (instr >> 21) & 0x1;
-      long int op1 = (rn == 31 ? 0 : STATE.registers[rn]);
-      
+      long int op1;
+
+      if (sf == 0) { // 32-bit access mode
+        op1 = (rn == 31 ? 0 : STATE.registers[rn]) & 0xffffffff;
+      } else { // 64-bit access mode
+        op1 = (rn == 31 ? 0 : STATE.registers[rn]);
+      }
       
       switch (opc) {
         case 0x0:
@@ -327,31 +348,38 @@ void data_processing_register(instruction instr) {
     }
 
     // Arithmetic Instructions
-
     if ((((instr >> 24) & 0x1) == 1) && (((instr >> 21) & 0x1) == 0)) {
+      long int op;
+
+      if (sf == 0) { // 32-bit access mode
+        op = (rn == 31 ? 0 : STATE.registers[rn]) & 0xffffffff;
+      } else { // 64-bit access mode
+        op = (rn == 31 ? 0 : STATE.registers[rn]);
+      }
+
       switch (opc) {
         case 0x0:  // ADD
-          result = STATE.registers[rn] + op2;
+          result = op + op2;
           break;
 
         case 0x1:  // ADDS
-          result = STATE.registers[rn] + op2;
+          result = op + op2;
           STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
           STATE.pstate.z = (result == 0);
-          STATE.pstate.c = (result < STATE.registers[rn]) || (result < op2);
-          STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ op2) >> (sf ? 63 : 31)) & 0x1);
+          STATE.pstate.c = (result < op) || (result < op2);
+          STATE.pstate.v = (((op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((op ^ op2) >> (sf ? 63 : 31)) & 0x1);
           break;
 
         case 0x2:  // SUB
-          result = STATE.registers[rn] - op2;
+          result = op - op2;
           break;
 
         case 0x3:  // SUBS
-          result = STATE.registers[rn] - op2;
+          result = op - op2;
           STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
           STATE.pstate.z = (result == 0);
-          STATE.pstate.c = (STATE.registers[rn] >= op2);
-          STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ op2) >> (sf ? 63 : 31)) & 0x1);
+          STATE.pstate.c = (op >= op2);
+          STATE.pstate.v = (((op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((op ^ op2) >> (sf ? 63 : 31)) & 0x1);
           break;
       }
     }
@@ -366,14 +394,14 @@ void data_processing_register(instruction instr) {
 
     if (x == 0) {
       // MADD
-      if (ra == 0x1f) {
+      if (ra == 0x1f) { // Encodes zero register
         result = STATE.registers[rn] * STATE.registers[rm];
       } else {
         result = STATE.registers[ra] + STATE.registers[rn] * STATE.registers[rm];
       }
     } else {
       // MSUB
-      if (ra == 0x1f) {
+      if (ra == 0x1f) { // Encodes zero register
         result = 0 - STATE.registers[rn] - STATE.registers[rm];
       } else {
         result = STATE.registers[ra] - STATE.registers[rn] - STATE.registers[rm];
@@ -381,8 +409,12 @@ void data_processing_register(instruction instr) {
     }
   }
   
-  if (rd != 31) {
-    STATE.registers[rd] = result;
+  if (rd != 31) { // Encodes zero register
+    if (sf == 0) { // 32-bit mode
+      STATE.registers[rd] = result & 0xffffffff;
+    } else { // 64-bit mode
+      STATE.registers[rd] = result;
+    }
   }
 }
 
@@ -639,114 +671,101 @@ void branch_instructions(instruction instr) {
 
       // Extract bits 3 to 0
       byte cond = instr & 0xf;
+      bool condition;
+
       switch (cond) {
         case 0x0:
-          if (STATE.pstate.z == 1) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = (STATE.pstate.z == 1);
           break;
         case 0x1:
-          if (STATE.pstate.z == 0) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = (STATE.pstate.z == 0);
           break;
         case 0xa:
-          if (STATE.pstate.n == 1) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = (STATE.pstate.n == 1);
           break;
         case 0xb:
-          if (STATE.pstate.n != 1) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = (STATE.pstate.n != 1);
           break;
         case 0xc:
-          if (STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = (STATE.pstate.z == 0) && (STATE.pstate.n == STATE.pstate.v);
           break;
         case 0xd:
-          if (!(STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v)) {
-            STATE.pc = STATE.pc + extended * 4;
-          } else {
-            STATE.pc += 4;
-          }
+          condition = !(STATE.pstate.z == 0 && STATE.pstate.n == STATE.pstate.v);
           break;
         case 0xe:
-          STATE.pc = STATE.pc + extended * 4;
+          condition = true;
           break;
+      }
+
+      if (condition) {
+        STATE.pc = STATE.pc + extended * 4;
+      } else {
+        STATE.pc += 4;
       }
   }
 }
 
-void initialise_memory(void) {
-  // Set program counter to 0
-  STATE.pc = 0;
+// Writing the state of the emulator to file
+void write_to_file(char* filename) {
+  FILE *fp;
 
-  // Set zero register to 0
-  STATE.zr = 0;
+  fp = fopen(filename, "w");
 
-  // Initialise the pstate
-  STATE.pstate = (pstate) {.n = 0, .z = 0, .c = 0, .v = 0};
-  
-  // Set all registers to 0
+  if (fp == NULL) {
+    perror("Error writing to file!\n");
+    exit(EXIT_FAILURE);
+  }
+
+  // Print registers
+  fprintf(fp, "Registers:\n");
   for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
-    STATE.registers[i] = 0;
+    fprintf(fp, "X%02d    = %016lx\n", i, STATE.registers[i]);
   }
 
-  // Set all memory to 0
-  for (int i = 0; i < MEMORY_SIZE; i++) {
-    STATE.memory[i] = 0;
+  // Print PC
+  fprintf(fp, "PC     = %016lx\n", STATE.pc);
+
+  // Print PSTATE flags
+  fprintf(fp, "PSTATE : %c%c%c%c\n",
+         STATE.pstate.n ? 'N' : '-',
+         STATE.pstate.z ? 'Z' : '-',
+         STATE.pstate.c ? 'C' : '-',
+         STATE.pstate.v ? 'V' : '-');
+
+  // Print memory
+  fprintf(fp, "Non-Zero Memory:\n");
+  for (int i = 0; i < MEMORY_SIZE / sizeof(uint32_t); i++) {
+    if (STATE.memory[i] != 0) {
+      fprintf(fp, "0x%08lx : %08x\n", i * sizeof(uint32_t), STATE.memory[i]);
+    }
   }
+
+  fclose(fp);
 }
 
-void process_instructions(void) {
-  int i = 0;
-  instruction instr;
-  int decoded;
-  
-  STATE.pstate.z = 1;
+// Printing the output of the emulator
+void print_output(void) {
+  // Print registers
+  printf("Registers:\n");
+  for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
+    printf("X%02d    = %016lx\n", i, STATE.registers[i]);
+  }
 
-  while (STATE.memory[i] != HALT) {
-    i = STATE.pc / 4;
-    instr = STATE.memory[i];
-    decoded = decode(instr);
+  // Print PC
+  printf("PC     = %016lx\n", STATE.pc);
 
-    switch(decoded) {
-      // Data Processing Instruction (Immediate)
-      case 0:
-        data_processing_immediate(instr);
-        STATE.pc += 4;
-        break;
-      // Branch
-      case 1:
-        branch_instructions(instr);
-        break;
-      // Single Data Transfer
-      case 2:
-        single_data_transfer(instr);
-        STATE.pc += 4;
-        break;
-      // Data Processing Instruction (Register)
-      case 3:
-        if (instr != HALT) {
-          data_processing_register(instr);
-          STATE.pc += 4;
-        }
-        break;
-      case 4:
-        STATE.pc += 4;
-        break;
+  // Print PSTATE flags
+  printf("PSTATE : %c%c%c%c\n",
+         STATE.pstate.n ? 'N' : '-',
+         STATE.pstate.z ? 'Z' : '-',
+         STATE.pstate.c ? 'C' : '-',
+         STATE.pstate.v ? 'V' : '-');
+
+  // Print memory
+  printf("Non-Zero Memory:\n");
+  for (int i = 0; i < MEMORY_SIZE / sizeof(uint32_t); i++) {
+    if (STATE.memory[i] != 0) {
+      printf("0x%08lx : %08x\n", i * sizeof(uint32_t), STATE.memory[i]);
     }
   }
 }
