@@ -111,9 +111,24 @@ void process_instructions(void) {
   
   STATE.pstate.z = 1;
 
-  while (STATE.memory[i] != HALT) {
-    i = STATE.pc / 4;
-    instr = STATE.memory[i];
+  while (instr != HALT) {
+    if (STATE.pc % 4 == 0) {
+      i = STATE.pc / 4;
+      instr = STATE.memory[i];
+    } else {
+      // Most significiant (4 - mod) bytes at address stored will be the lowest (4 - mod) bytes of instruction
+      int mod = STATE.pc % 4; // mod/4 of the way into address
+      instruction result1 = (STATE.memory[STATE.pc / 4] >> (mod * 8));
+
+      printf("%x", result1);
+
+      // The least significant (mod) bytes at (address + 4) are going to be the (4 - mod) most significant bytes
+      // of the instruction
+      instruction result2 = (STATE.memory[(STATE.pc + 4) / 4] << ((4 - mod) * 8));
+
+      instr = result1 | result2;
+    }
+
     decoded_func = decode(instr);
 
     if (decoded_func != NULL) {
@@ -614,9 +629,7 @@ void single_data_transfer(instruction instr) {
           mask = 0xffffff;
         }
 
-        printf("%x", STATE.memory[address / 4]);
         STATE.memory[address / 4] = (result << (mod * 8)) | (STATE.memory[address / 4] & mask);
-        printf("%x", STATE.memory[address / 4]);
 
         // Need to create a mask to decide which bits of the address that we are writing to, to keep and which ones
         // to overwrite. Any bits that we are not writing to should be kept as they were before
@@ -658,7 +671,7 @@ void branch_instructions(instruction instr) {
     case 0x35:
       // Extract bits 9 to 5
       byte xn = (instr >> 5) & 0x1f;
-      STATE.pc = xn;
+      STATE.pc = STATE.registers[xn];
       break;
     // Conditional
     case 0x15:
