@@ -45,7 +45,7 @@ void initialise_memory(void) {
   STATE.zr = 0;
 
   // Initialise the pstate
-  STATE.pstate = (pstate) {.n = 0, .z = 0, .c = 0, .v = 0};
+  STATE.pstate = (pstate) {.n = 0, .z = 1, .c = 0, .v = 0};
   
   // Set all registers to 0
   for (int i = 0; i < NUMBER_OF_REGISTERS; i++) {
@@ -108,8 +108,6 @@ void process_instructions(void) {
   instruction instr;
   typedef void (*func_ptr)(instruction);
   func_ptr decoded_func;
-  
-  STATE.pstate.z = 1;
 
   while (instr != HALT) {
     if (STATE.pc % 4 == 0) {
@@ -119,8 +117,6 @@ void process_instructions(void) {
       // Most significiant (4 - mod) bytes at address stored will be the lowest (4 - mod) bytes of instruction
       int mod = STATE.pc % 4; // mod/4 of the way into address
       instruction result1 = (STATE.memory[STATE.pc / 4] >> (mod * 8));
-
-      printf("%x", result1);
 
       // The least significant (mod) bytes at (address + 4) are going to be the (4 - mod) most significant bytes
       // of the instruction
@@ -494,15 +490,25 @@ void single_data_transfer(instruction instr) {
       // Extract bits 20 to 12
       int simm9 = (instr >> 12) & 0x1ff;
 
-      address = STATE.registers[xn] + simm9;
+      // Sign extend to 64 bits
+      sign_bit = (simm9 >> 8) & 0x1;
+      mask = sign_bit << 8;
+      extended = (simm9 ^ mask) - mask;
+
+      address = STATE.registers[xn] + extended;
       STATE.registers[xn] = address;
     // Post-Indexed
     } else if (I == 0) {
       // Extract bits 20 to 12
       int simm9 = (instr >> 12) & 0x1ff;
 
+      // Sign extend to 64 bits
+      sign_bit = (simm9 >> 8) & 0x1;
+      mask = sign_bit << 8;
+      extended = (simm9 ^ mask) - mask;
+
       address = STATE.registers[xn];
-      STATE.registers[xn] += simm9;
+      STATE.registers[xn] += extended;
     }
   }
 
