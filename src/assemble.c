@@ -188,15 +188,8 @@ int count_lines(FILE *fp) {
   return count;
 }
 
-
-
 token_line process_line(char * line) {
   // Process a line from the .s file
-  char* startOfSecond = strchr(line, ' ');
-  size_t lengthOfFirst = startOfSecond - line;
-  char* first = (char*)malloc((lengthOfFirst + 1) * sizeof(char));
-  strncpy(first, line, lengthOfFirst);
-
   const char s[] = " "; 
   char * instr_str = strktok(line, s);
   operands current_operands;
@@ -214,135 +207,135 @@ token_line process_line(char * line) {
 
   instr_name instr;
 
-  if (strcmp(first, "add") == 0) 
+  if (strcmp(instr_str, "add") == 0) 
   {
     instr = ADD;
   } 
-  else if (strcmp(first, "adds") == 0)
+  else if (strcmp(instr_str, "adds") == 0)
   {
     instr = ADDS;
   }
-  else if (strcmp(first, "sub") == 0)
+  else if (strcmp(instr_str, "sub") == 0)
   {
     instr = SUB;
   }
-  else if (strcmp(first, "subs") == 0)
+  else if (strcmp(instr_str, "subs") == 0)
   {
     instr = SUBS;
   }
-  else if (strcmp(first, "cmp") == 0)
+  else if (strcmp(instr_str, "cmp") == 0)
   {
     instr = CMP;
   }
-  else if (strcmp(first, "cmn") == 0)
+  else if (strcmp(instr_str, "cmn") == 0)
   {
     instr = CMN;
   }
-  else if (strcmp(first, "neg") == 0)
+  else if (strcmp(instr_str, "neg") == 0)
   {
     instr = NEG;
   }
-  else if (strcmp(first, "negs") == 0)
+  else if (strcmp(instr_str, "negs") == 0)
   {
     instr = NEGS;
   }
-  else if (strcmp(first, "and") == 0)
+  else if (strcmp(instr_str, "and") == 0)
   {
     instr = AND;
   }
-  else if (strcmp(first, "ands") == 0)
+  else if (strcmp(instr_str, "ands") == 0)
   {
     instr = ANDS;
   }
-  else if (strcmp(first, "bic") == 0)
+  else if (strcmp(instr_str, "bic") == 0)
   {
     instr = BIC;
   }
-  else if (strcmp(first, "bics") == 0)
+  else if (strcmp(instr_str, "bics") == 0)
   {
     instr = BICS;
   }
-  else if (strcmp(first, "eor") == 0)
+  else if (strcmp(instr_str, "eor") == 0)
   {
     instr = EOR;
   }
-  else if (strcmp(first, "orr") == 0)
+  else if (strcmp(instr_str, "orr") == 0)
   {
     instr = ORR;
   }
-  else if (strcmp(first, "eon") == 0)
+  else if (strcmp(instr_str, "eon") == 0)
   {
     instr = EON;
   }
-  else if (strcmp(first, "orn") == 0)
+  else if (strcmp(instr_str, "orn") == 0)
   {
     instr = ORN;
   }
-  else if (strcmp(first, "tst") == 0)
+  else if (strcmp(instr_str, "tst") == 0)
   {
     instr = TST;
   }
-  else if (strcmp(first, "movk") == 0)
+  else if (strcmp(instr_str, "movk") == 0)
   {
     instr = MOVK;
   }
-  else if (strcmp(first, "movn") == 0)
+  else if (strcmp(instr_str, "movn") == 0)
   {
     instr = MOVN;
   }
-  else if (strcmp(first, "movz") == 0)
+  else if (strcmp(instr_str, "movz") == 0)
   {
     instr = MOVZ;
   }
-  else if (strcmp(first, "mov") == 0)
+  else if (strcmp(instr_str, "mov") == 0)
   {
     instr = MOV;
   }
-  else if (strcmp(first, "mvn") == 0)
+  else if (strcmp(instr_str, "mvn") == 0)
   {
     instr = MVN;
   }
-  else if (strcmp(first, "madd") == 0)
+  else if (strcmp(instr_str, "madd") == 0)
   {
     instr = MADD;
   }
-  else if (strcmp(first, "msub") == 0)
+  else if (strcmp(instr_str, "msub") == 0)
   {
     instr = MSUB;
   }
-  else if (strcmp(first, "mul") == 0)
+  else if (strcmp(instr_str, "mul") == 0)
   {
     instr = MUL;
   }
-  else if (strcmp(first, "mneg") == 0)
+  else if (strcmp(instr_str, "mneg") == 0)
   {
     instr = MNEG;
   }
-  else if (strcmp(first, "b") == 0)
+  else if (strcmp(instr_str, "b") == 0)
   {
     instr = B;
   }
-  else if (strcmp(first, "b.cond") == 0)
+  else if (strcmp(instr_str, "b.cond") == 0)
   {
     instr = BCOND;
   }
-  else if (strcmp(first, "br") == 0)
+  else if (strcmp(instr_str, "br") == 0)
   {
     instr = BR;
   }
-  else if (strcmp(first, "str") == 0)
+  else if (strcmp(instr_str, "str") == 0)
   {
     instr = STR;
   }
-  else if (strcmp(first, "ldr") == 0)
+  else if (strcmp(instr_str, "ldr") == 0)
   {
     instr = LDR;
   }
-  else if (strcmp(first, "nop") == 0)
+  else if (strcmp(instr_str, "nop") == 0)
   {
     instr = NOP;
   }
-  else if (strcmp(first, ".int") == 0)
+  else if (strcmp(instr_str, ".int") == 0)
   { 
     instr = DIR;
   }
