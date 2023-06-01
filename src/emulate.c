@@ -141,6 +141,8 @@ void data_processing_immediate(instruction instr) {
   // Extract bits 4-0
   byte rd = instr & 0x1f;
 
+  reg result;
+
   // Arithmetic operations - check opi is 010
   if (opi == 0x2) {
     // Extract bit 22
@@ -151,39 +153,39 @@ void data_processing_immediate(instruction instr) {
     byte rn = (instr >> 5) & 0x1f;
 
     uint64_t op = imm12 << 12;
+    reg reg_op;
 
-    reg result;
+    if (sf == 0) { // 32-bit accesss mode
+      reg_op = STATE.registers[rn] & 0xffffffff;
+    } else { // 64-bit access mode
+      reg_op = STATE.registers[rn];
+    }
 
     // Calculate the result based on the opcode
     switch (opc) {
       case 0x0:  // ADD
-        result = STATE.registers[rn] + (sh ? op : imm12);
+        result = reg_op + (sh ? op : imm12);
         break;
 
       case 0x1:  // ADDS
-        result = STATE.registers[rn] + (sh ? op : imm12);
+        result = reg_op + (sh ? op : imm12);
         STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
         STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (result < STATE.registers[rn]);
-        STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
+        STATE.pstate.c = (result < reg_op);
+        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
         break;
 
       case 0x2:  // SUB
-        result = STATE.registers[rn] - (sh ? op : imm12);
+        result = reg_op - (sh ? op : imm12);
         break;
 
       case 0x3:  // SUBS
-        result = STATE.registers[rn] - (sh ? op : imm12);
+        result = reg_op - (sh ? op : imm12);
         STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
         STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (STATE.registers[rn] >= (sh ? op : imm12));
-        STATE.pstate.v = (((STATE.registers[rn] ^ result) >> (sf ? 63 : 31)) & 0x1) && (((STATE.registers[rn] ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
+        STATE.pstate.c = (reg_op >= (sh ? op : imm12));
+        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
         break;
-    }
-
-    // Store the result in the destination register
-    if (rd != 31) {
-      STATE.registers[rd] = result;
     }
   }
 
@@ -200,17 +202,26 @@ void data_processing_immediate(instruction instr) {
     switch (opc) {
       case 0x0:
         // MOVN
-        STATE.registers[rd] = ~operand;
+        result = ~operand;
         break;
       case 0x2:
         // MOVZ
-        STATE.registers[rd] = operand;
+        result = operand;
         break;
       case 0x3:
         // MOVK
         uint64_t mask = 0xffff;
-        STATE.registers[rd] = (STATE.registers[rd] & ~(mask << (hw * 16))) | (imm16 << (hw * 16));
+        result = (STATE.registers[rd] & ~(mask << (hw * 16))) | (imm16 << (hw * 16));
         break;
+    }
+  }
+
+  // Store the result in the destination register
+  if (rd != 31) {
+    if (sf == 0) { // 32-bit mode
+      STATE.registers[rd] = result & 0xffffffff;
+    } else { // 64-bit mode
+      STATE.registers[rd] = result;
     }
   }
 }
