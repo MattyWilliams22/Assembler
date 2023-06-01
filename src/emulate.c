@@ -2,22 +2,15 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "prototypes.h"
 
 // Readable aliases for types
 typedef uint64_t reg;
 typedef uint8_t byte;
 typedef uint32_t instruction;
 
-// Prototypes
-void write_to_file(char* filename);
-void print_output(void);
-int *decode(instruction instr);
-void data_processing_immediate(instruction instr);
-void data_processing_register(instruction instr);
-void single_data_transfer(instruction instr);
-void branch_instructions(instruction instr);
-void initialise_memory(void);
-void process_instructions(void);
+// Type defs
+typedef void (*funcptr)(instruction);
 
 //Emulating A64 instructions
 #define NUMBER_OF_REGISTERS 31
@@ -62,6 +55,79 @@ void initialise_memory(void) {
   // Set all memory to 0
   for (int i = 0; i < MEMORY_SIZE; i++) {
     STATE.memory[i] = 0;
+  }
+}
+
+void read_from_file(char* filename) {
+  // Load binary file into memory
+  FILE *fp;
+
+  fp = fopen(filename, "rb");
+  if (fp == NULL) {
+    perror("Error opening the binary file!\n");
+    exit(EXIT_FAILURE);
+  }
+
+  fread(STATE.memory, sizeof(STATE.memory), 1, fp);
+  fclose(fp);
+}
+
+// Decode instruction using bits 28 to 25 in instruction.
+funcptr decode(instruction instr) {
+  // Extract bits 28 to 25
+  byte bits_28_to_25 = (instr >> 25) & 0xf;
+
+  if (instr == NOOP) {
+    return &nop;
+  }
+
+  // Decode instruction
+  switch (bits_28_to_25) {
+    case 0x8:
+    case 0x9:
+      return &data_processing_immediate;
+      break;
+    case 0xa:
+    case 0xb:
+      return &branch_instructions;
+      break;
+    case 0x5:
+    case 0xd:
+      return &data_processing_register;
+      break;
+    case 0xc:
+      return &single_data_transfer;
+      break;
+    default:
+      return NULL;
+  }
+}
+
+void process_instructions(void) {
+  int i = 0;
+  instruction instr;
+  typedef void (*func_ptr)(instruction);
+  func_ptr decoded_func;
+  
+  STATE.pstate.z = 1;
+
+  while (STATE.memory[i] != HALT) {
+    i = STATE.pc / 4;
+    instr = STATE.memory[i];
+    decoded_func = decode(instr);
+
+    if (decoded_func != NULL) {
+      if (instr != HALT) {
+        decoded_func(instr);
+        if (decoded_func != &branch_instructions && decoded_func != &nop) {
+          STATE.pc += 4;
+        } 
+      }
+    } else {
+      printf("%x", instr);
+      perror("Invalid Instruction Detected!\n");
+      exit(EXIT_FAILURE);
+    }
   }
 }
 
@@ -190,22 +256,28 @@ void data_processing_register(instruction instr) {
     }
     
     switch (shift_type) {
-      case 0x1:
+      case 0x0:
         // LSL
         op2 = op2 << operand;
         break;
-      case 0x2:
+      case 0x1:
         // LSR
         op2 = op2 >> operand;
         break;
-      case 0x3:
+      case 0x2:
         // ASR
         bool sign_bit = (op2 >> (sf ? 63 : 31)) & 0x1;
-        op2 = (op2 >> operand) | (sign_bit << ((sf ? 64 : 32) - operand));
+        
+        op2 = (op2 >> operand) | (sign_bit << ((sf ? 63 : 31) - (op2 >> operand)));
+
+        // Sign extend
+        long int mask = sign_bit << (sf ? 63 : 31);
+        op2 = (op2 ^ mask) - mask;
+
         break;
-      case 0x4:
+      case 0x3:
         // ROR
-        op2 = (op2 >> operand) | (op2 << ((sf ? 64 : 32) - operand));
+        op2 = (op2 >> operand) | (op2 << ((sf ? 63 : 31) - (op2 >> operand)));
         break;
     }
 
@@ -629,61 +701,8 @@ void branch_instructions(instruction instr) {
   }
 }
 
-// Decode instruction using bits 28 to 25 in instruction.
-int *decode(instruction instr) {
-  // Extract bits 28 to 25
-  byte bits_28_to_25 = (instr >> 25) & 0xf;
-
-  if (instr == NOOP) {
-    return &nop;
-  }
-
-  // Decode instruction
-  switch (bits_28_to_25) {
-    case 0x8:
-    case 0x9:
-      return &data_processing_immediate;
-      break;
-    case 0xa:
-    case 0xb:
-      return &branch_instructions;
-      break;
-    case 0x5:
-    case 0xd:
-      return &data_processing_register;
-      break;
-    case 0xc:
-      return &single_data_transfer;
-      break;
-    default:
-      return NULL;
-  }
-}
-
 void nop(instruction instr) {
   STATE.pc += 4;
-}
-
-void process_instructions(void) {
-  int i = 0;
-  instruction instr;
-  typedef void (*func_ptr)(instruction);
-  func_ptr decoded_func;
-  
-  STATE.pstate.z = 1;
-
-  while (STATE.memory[i] != HALT) {
-    i = STATE.pc / 4;
-    instr = STATE.memory[i];
-    decoded_func = decode(instr);
-
-    if (decoded_func != NULL) {
-      decoded_func(instr);
-      if (decoded_func != &branch_instructions) {
-        STATE.pc += 4;
-      }
-    }
-  }
 }
 
 // Writing the state of the emulator to file
@@ -762,16 +781,7 @@ int main(int argc, char **argv) {
   initialise_memory();
 
   // Load binary file into memory
-  FILE *fp;
-
-  fp = fopen(argv[1], "rb");
-  if (fp == NULL) {
-    perror("Error opening the binary file!\n");
-    exit(EXIT_FAILURE);
-  }
-
-  fread(STATE.memory, sizeof(STATE.memory), 1, fp);
-  fclose(fp);
+  read_from_file(argv[1]);
 
   // Process all of the read-in instructions
   process_instructions();
