@@ -11,7 +11,7 @@ typedef uint32_t instruction;
 // Prototypes
 void write_to_file(char* filename);
 void print_output(void);
-int decode(instruction instr);
+int *decode(instruction instr);
 void data_processing_immediate(instruction instr);
 void data_processing_register(instruction instr);
 void single_data_transfer(instruction instr);
@@ -42,15 +42,6 @@ typedef struct {
   uint32_t memory[MEMORY_SIZE];
 } state;
 
-enum instr_type {
-  DATA_PROCESSING_IMMEDIATE,
-  DATA_PROCESSING_REGISTER,
-  SINGLE_DATA_TRANSFER,
-  BRANCHES,
-  NOP,
-  UNRECOGNISED
-};
-
 state STATE;
 
 void initialise_memory(void) {
@@ -71,80 +62,6 @@ void initialise_memory(void) {
   // Set all memory to 0
   for (int i = 0; i < MEMORY_SIZE; i++) {
     STATE.memory[i] = 0;
-  }
-}
-
-// Decode instruction using bits 28 to 25 in instruction.
-int decode(instruction instr) {
-  // Extract bits 28 to 25
-  byte bits_28_to_25 = (instr >> 25) & 0xf;
-
-  if (instr == NOOP) {
-    return NOP;
-  }
-
-  // Decode instruction
-  switch (bits_28_to_25) {
-    case 0x8:
-    case 0x9:
-      return DATA_PROCESSING_IMMEDIATE;
-      break;
-    case 0xa:
-    case 0xb:
-      return BRANCHES;
-      break;
-    case 0x5:
-    case 0xd:
-      return DATA_PROCESSING_REGISTER;
-      break;
-    case 0xc:
-      return SINGLE_DATA_TRANSFER;
-      break;
-    default:
-      return UNRECOGNISED;
-      break;
-  }
-}
-
-void process_instructions(void) {
-  int i = 0;
-  instruction instr;
-  int decoded;
-  
-  STATE.pstate.z = 1;
-
-  while (STATE.memory[i] != HALT) {
-    i = STATE.pc / 4;
-    instr = STATE.memory[i];
-    decoded = decode(instr);
-
-    switch(decoded) {
-      // Data Processing Instruction (Immediate)
-      case 0:
-        data_processing_immediate(instr);
-        STATE.pc += 4;
-        break;
-      // Data Processing Instruction (Register)
-      case 1:
-        if (instr != HALT) {
-          data_processing_register(instr);
-          STATE.pc += 4;
-        }
-        break;
-      // Single Data Transfer Instruction
-      case 2:
-        single_data_transfer(instr);
-        STATE.pc += 4;
-        break;
-      // Branch Instruction
-      case 3:
-        branch_instructions(instr);
-        break;
-      // NOP Instruction
-      case 4:
-        STATE.pc += 4;
-        break;
-    }
   }
 }
 
@@ -709,6 +626,63 @@ void branch_instructions(instruction instr) {
       } else {
         STATE.pc += 4;
       }
+  }
+}
+
+// Decode instruction using bits 28 to 25 in instruction.
+int *decode(instruction instr) {
+  // Extract bits 28 to 25
+  byte bits_28_to_25 = (instr >> 25) & 0xf;
+
+  if (instr == NOOP) {
+    return &nop;
+  }
+
+  // Decode instruction
+  switch (bits_28_to_25) {
+    case 0x8:
+    case 0x9:
+      return &data_processing_immediate;
+      break;
+    case 0xa:
+    case 0xb:
+      return &branch_instructions;
+      break;
+    case 0x5:
+    case 0xd:
+      return &data_processing_register;
+      break;
+    case 0xc:
+      return &single_data_transfer;
+      break;
+    default:
+      return NULL;
+  }
+}
+
+void nop(instruction instr) {
+  STATE.pc += 4;
+}
+
+void process_instructions(void) {
+  int i = 0;
+  instruction instr;
+  typedef void (*func_ptr)(instruction);
+  func_ptr decoded_func;
+  
+  STATE.pstate.z = 1;
+
+  while (STATE.memory[i] != HALT) {
+    i = STATE.pc / 4;
+    instr = STATE.memory[i];
+    decoded_func = decode(instr);
+
+    if (decoded_func != NULL) {
+      decoded_func(instr);
+      if (decoded_func != &branch_instructions) {
+        STATE.pc += 4;
+      }
+    }
   }
 }
 
