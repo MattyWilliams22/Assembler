@@ -404,20 +404,26 @@ void data_processing_register(instruction instr) {
     // Extract bits 14-10
     byte ra = (instr >> 10) & 0x1f;
 
+    uint64_t op;
+    uint64_t op1;
+    uint64_t op2;
+    
+    if (sf == 0) { // 32-bit access mode
+      op = (ra == 31 ? 0 : STATE.registers[ra]) & 0xffffffff;
+      op1 = (rn == 31 ? 0 : STATE.registers[rn]) & 0xffffffff;
+      op2 = (rm == 31 ? 0 : STATE.registers[rm]) & 0xffffffff;
+    } else { // 64-bit access mode
+      op = (ra == 31 ? 0 : STATE.registers[ra]);
+      op1 = (rn == 31 ? 0 : STATE.registers[rn]);
+      op2 = (rm == 31 ? 0 : STATE.registers[rm]);
+    }
+
     if (x == 0) {
       // MADD
-      if (ra == 0x1f) { // Encodes zero register
-        result = STATE.registers[rn] * STATE.registers[rm];
-      } else {
-        result = STATE.registers[ra] + STATE.registers[rn] * STATE.registers[rm];
-      }
+      result = op + op1 * op2;
     } else {
       // MSUB
-      if (ra == 0x1f) { // Encodes zero register
-        result = 0 - STATE.registers[rn] - STATE.registers[rm];
-      } else {
-        result = STATE.registers[ra] - STATE.registers[rn] - STATE.registers[rm];
-      }
+      result = op - op1 - op2;
     }
   }
   
