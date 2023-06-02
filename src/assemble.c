@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 typedef enum {
   ADD,ADDS,SUB,SUBS,
@@ -52,20 +53,6 @@ typedef struct {
   binary *pieces;
   int piece_count;
 } binary_line;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Aliases for types
 
@@ -384,6 +371,49 @@ char *get_types_dir(operand *operands, int op_count) {
   operands[0].type = IMM;
 }
 
+typedef operand* (*func_ptr)(operand*, int);
+
+struct InstructionMapping {
+    const char* instruction;
+    opcode_name opcode;
+    func_ptr function;
+};
+
+struct InstructionMapping instructionMappings[] = {
+    {"add", ADD, &get_types_add},
+    {"adds", ADDS, &get_types_add},
+    {"sub", SUB, &get_types_add},
+    {"subs", SUBS, &get_types_add},
+    {"cmp", CMP, &get_types_cmp},
+    {"cmn", CMN, &get_types_cmp},
+    {"neg", NEG, &get_types_cmp},
+    {"negs", NEGS, &get_types_cmp},
+    {"and", AND, &get_types_and},
+    {"ands", ANDS, &get_types_and},
+    {"bic", BIC, &get_types_and},
+    {"bics", BICS, &get_types_and},
+    {"eor", EOR, &get_types_and},
+    {"orr", ORR, &get_types_and},
+    {"eon", EON, &get_types_and},
+    {"orn", ORN, &get_types_and},
+    {"tst", TST, &get_types_tst},
+    {"movk", MOVK, &get_types_movx},
+    {"movn", MOVN, &get_types_movx},
+    {"movz", MOVZ, &get_types_movx},
+    {"mov", MOV, &get_types_mov},
+    {"mvn", MVN, &get_types_mvn},
+    {"madd", MADD, &get_types_madd},
+    {"msub", MSUB, &get_types_madd},
+    {"mul", MUL, &get_types_mul},
+    {"mneg", MNEG, &get_types_mul},
+    {"b", B, &get_types_b},
+    {"b.", BCOND, &get_types_b},
+    {"br", BR, &get_types_br},
+    {"str", STR, &get_types_str},
+    {"ldr", LDR, &get_types_ldr},
+    {"nop", NOP, NULL},
+    {".int", DIR, &get_types_dir},
+};
 
 // Converts a string into a token_line
 token_line process_line(char * line) {
@@ -424,186 +454,21 @@ token_line process_line(char * line) {
     word_count++;
   }
 
-  typedef operand * (*func_ptr)(operand *, int);
-  func_ptr get_types;
-  opcode_name opcode;
+  func_ptr get_types = NULL;
+  opcode_name opcode = UNRECOGNISED;
 
-  if (strcmp(instr_str, "add") == 0) 
-  {
-    opcode = ADD;
-    get_types = &get_types_add;
-  } 
-  else if (strcmp(instr_str, "adds") == 0)
-  {
-    opcode = ADDS;
-    get_types = &get_types_add;
+  for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
+    if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
+      opcode = instructionMappings[i].opcode;
+      get_types = instructionMappings[i].function;
+      break;
+    }
   }
-  else if (strcmp(instr_str, "sub") == 0)
-  {
-    opcode = SUB;
-    get_types = &get_types_add;
-  }
-  else if (strcmp(instr_str, "subs") == 0)
-  {
-    opcode = SUBS;
-    get_types = &get_types_add;
-  }
-  else if (strcmp(instr_str, "cmp") == 0)
-  {
-    opcode = CMP;
-    get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "cmn") == 0)
-  {
-    opcode = CMN;
-    get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "neg") == 0)
-  {
-    opcode = NEG;
-    get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "negs") == 0)
-  {
-    opcode = NEGS;
-    get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "and") == 0)
-  {
-    opcode = AND;
-    get_types = &get_types_and;
 
-  }
-  else if (strcmp(instr_str, "ands") == 0)
-  {
-    opcode = ANDS;
-    get_types = &get_types_and;
-
-  }
-  else if (strcmp(instr_str, "bic") == 0)
-  {
-    opcode = BIC;
-    get_types = &get_types_and;
-
-  }
-  else if (strcmp(instr_str, "bics") == 0)
-  {
-    opcode = BICS;
-    get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "eor") == 0)
-  {
-    opcode = EOR;
-    get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "orr") == 0)
-  {
-    opcode = ORR;
-    get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "eon") == 0)
-  {
-    opcode = EON;
-    get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "orn") == 0)
-  {
-    opcode = ORN;
-    get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "tst") == 0)
-  {
-    opcode = TST;
-    get_types = &get_types_tst;
-  }
-  else if (strcmp(instr_str, "movk") == 0)
-  {
-    opcode = MOVK;
-    get_types = &get_types_movx;
-  }
-  else if (strcmp(instr_str, "movn") == 0)
-  {
-    opcode = MOVN;
-    get_types = &get_types_movx;
-  }
-  else if (strcmp(instr_str, "movz") == 0)
-  {
-    opcode = MOVZ;
-    get_types = &get_types_movx;
-  }
-  else if (strcmp(instr_str, "mov") == 0)
-  {
-    opcode = MOV;
-    get_types = &get_types_mov;
-  }
-  else if (strcmp(instr_str, "mvn") == 0)
-  {
-    opcode = MVN;
-    get_types = &get_types_mvn;
-  }
-  else if (strcmp(instr_str, "madd") == 0)
-  {
-    opcode = MADD;
-    get_types = &get_types_madd;
-  }
-  else if (strcmp(instr_str, "msub") == 0)
-  {
-    opcode = MSUB;
-    get_types = &get_types_madd;
-  }
-  else if (strcmp(instr_str, "mul") == 0)
-  {
-    opcode = MUL;
-    get_types = &get_types_mul;
-  }
-  else if (strcmp(instr_str, "mneg") == 0)
-  {
-    opcode = MNEG;
-    get_types = &get_types_mul;
-  }
-  else if (strcmp(instr_str, "b") == 0)
-  {
-    opcode = B;
-    get_types = &get_types_b;
-  }
-  else if (strcmp(instr_str, "b.") == 0)
-  {
-    opcode = BCOND;
-    get_types = &get_types_b;
-  }
-  else if (strcmp(instr_str, "br") == 0)
-  {
-    opcode = BR;
-    get_types = &get_types_br;
-  }
-  else if (strcmp(instr_str, "str") == 0)
-  {
+  if (opcode == LDR && word_count != 2) {
     opcode = STR;
     get_types = &get_types_str;
   }
-  else if (strcmp(instr_str, "ldr") == 0)
-  {
-    opcode = LDR;
-    if (word_count == 2) {
-      get_types = &get_types_ldr;
-    } else {
-      get_types = &get_types_str;
-    }
-  }
-  else if (strcmp(instr_str, "nop") == 0)
-  {
-    opcode = NOP;
-  }
-  else if (strcmp(instr_str, ".int") == 0)
-  { 
-    opcode = DIR;
-    get_types = &get_types_dir;
-  }
-  else /* default: */
-  {
-    opcode = UNRECOGNISED;
-  }
-
 
   operand *current_operands;
   token_line current_line;
