@@ -407,7 +407,7 @@ void data_processing_register(instruction instr) {
     uint64_t op;
     uint64_t op1;
     uint64_t op2;
-    
+
     if (sf == 0) { // 32-bit access mode
       op = (ra == 31 ? 0 : STATE.registers[ra]) & 0xffffffff;
       op1 = (rn == 31 ? 0 : STATE.registers[rn]) & 0xffffffff;
@@ -423,7 +423,7 @@ void data_processing_register(instruction instr) {
       result = op + op1 * op2;
     } else {
       // MSUB
-      result = op - op1 - op2;
+      result = op - op1 * op2;
     }
   }
   
