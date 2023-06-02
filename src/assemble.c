@@ -25,25 +25,11 @@ typedef enum {
   UNRECOGNISED
 } instr_name;
 
-typedef char label[];
-typedef int imm;
-
-union {
-  label label;
-  imm imm;
-} literal;
-
 typedef enum {
-  RI,
-  XI,
-  WI,
-  OPTIONAL,
-  RNSP,
-  Z12,
+  REG,
   IMM,
-  SIMM,
   SHIFT,
-  LABEL, ADD,
+  LITERAL,
   UNRECOGNISED
 } operand_type;
 
@@ -188,148 +174,336 @@ int count_lines(FILE *fp) {
   return count;
 }
 
+char *process_add(operands ops) {
+  ops.types[0] = REG;
+  ops.types[1] = REG;
+  if (ops.words[2][0] == '#') {
+    ops.types[2] = IMM;
+    if (ops.words[3] != NULL) {
+      // <Rd>, <Rn>, #<imm>, lsl #(0|12)
+      ops.types[3] = SHIFT;
+      ops.count = 4;
+    } else {
+      // <Rd>, <Rn>, #<imm>
+      ops.count = 3;
+    }
+  } else {
+    ops.types[2] = REG;
+    if (ops.words[3] != NULL) {
+      // <Rd>, <Rn>, <Rm>, <shift> #<imm>
+      ops.types[3] = SHIFT;
+      ops.count = 4;
+    } else {
+      // <Rd>, <Rn>, <Rm>
+      ops.count = 3
+    }
+  }
+}
+
+char *process_cmp(operands ops) {
+
+  if (ops.words[1][0] == '#') {
+    // <Rn>, #<imm>{, <lsl #(0|12)>}
+    if (ops.words[2] != NULL) {
+      // <Rn>, #<imm>, <lsl #(0|12)>
+    } else {
+      // <Rn>, #<imm>
+    }
+  } else {
+    // <Rn>, <Rm>{, <shift> #<imm>}
+    if (ops.words[2] != NULL) {
+      // <Rn>, <Rm>, <shift> #<imm>
+    } else {
+      // <Rn>, <Rm>
+    }
+  }
+}
+
+char *process_and(operands ops) {
+  // <Rd>, <Rn>, <Rm>, <shift> #<imm>
+}
+
+char *process_tst(operands ops) {
+  // <Rn>, <Rm>{, <shift> #<imm>}
+  if (ops.words[2] != NULL) {
+    // <Rn>, <Rm>, <shift> #<imm>
+  } else {
+    // <Rn>, <Rm>
+  }
+}
+
+char *process_movx(operands ops) {
+  // <Rd>, #<imm>{, lsl #<imm>}
+  if (ops.words[2] != NULL) {
+    // <Rd>, #<imm>, lsl #<imm>
+  } else {
+    // <Rd>, #<imm>
+  }
+}
+
+char *process_mov(operands ops) {
+  // <Rd>, <Rn>
+}
+
+char *process_mvn(operands ops) {
+  // <Rd>, <Rm>{, <shift> #<imm>}
+  if (ops.words[2] != NULL) {
+    // <Rd>, <Rm>, <shift> #<imm>
+  } else {
+    // <Rd>, <Rm>
+  }
+}
+  
+
+char *process_madd(operands ops) {
+  // <Rd>, <Rn>, <Rm>, <Ra>
+}
+
+char *process_mul(operands ops) {
+  // <Rd>, <Rn>, <Rm>
+}
+
+char *process_b(operands ops) {
+  // <literal>      (label or immediate address)
+  if (ops.words[0][0] == '0' && ops.words[0][1] == 'x') {
+    // <address>
+  } else {
+    // <label>
+  }
+}
+
+char *process_br(operands ops) {
+  // <Xn>
+}
+
+char *process_str(operands ops) {
+  int length = strlen(ops.words[2]);
+  if (ops.words[2][length] == '!') {
+    // <Rt>, [<Xn>, #<simm>]!                  (Pre-index)
+  } else if (ops.words[2][length] != ']') {
+    // <Rt>, [<Xn>], #<simm>                   (Post-index)
+  } else if (ops.words[2][0] != '#') {
+    // <Rt>, [<Xn>], #<simm>                   (Post-index)
+  } else {
+    // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
+    if (ops.words[3] != NULL) {
+    // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
+    } else {
+    // <Rt>, [<Xn>, <Rm>]
+    }
+  }
+}
+
+char *process_ldr(operands ops) {
+  // <Rt>, <literal>
+}
+
+char *process_dir(operands ops) {
+  // <simm>
+}
+
 token_line process_line(char * line) {
   // Process a line from the .s file
   const char s[] = " "; 
+  const char d[] = ".";
   char * instr_str = strktok(line, s);
+  instr_str = strtok(instr_str, d);
+  int count = 0;
+  char *words[10];
+
+  for (char *q = strtok(NULL, d); q != NULL; q = strtok(NULL, d)) {
+    strcpy(words[count], q);
+    count++;
+  }
+  
+  for (char *p = strtok(line, s); p != NULL; p = strtok(NULL, s)) {
+    strcpy(words[count], p);
+    count++;
+  }
+
+  char *sentence = "";
+  for (int i = 0; i < count; i++) {
+    char *current_word = words[i];  
+    int length = strlen(current_word);
+    strcat(sentence, current_word);
+    if (current_word[length] != ',') {
+      strcat(sentence, " ");
+    }
+  }
+
+  const char c[] = ",";
   operands current_operands;
   current_operands.count = 0;
-  for (char *p = strtok(line, s); p != NULL; p = strtok(NULL, s)) {
-    current_operands.words[current_operands.count] = p;
-
-
-    // need to check actual type of operand
-    current_operands.types[current_operands.count] = RI;
-
-
+  for (char *p = strtok(sentence, c); p != NULL; p = strtok(NULL, c)) {
+    strcpy(current_operands.words[current_operands.count], p);
     current_operands.count++;
   }
 
+  typedef char (*func_ptr)(operands);
+  func_ptr operand_processor;
   instr_name instr;
 
   if (strcmp(instr_str, "add") == 0) 
   {
     instr = ADD;
+    operand_processor = &process_add;
   } 
   else if (strcmp(instr_str, "adds") == 0)
   {
     instr = ADDS;
+    operand_processor = &process_add;
   }
   else if (strcmp(instr_str, "sub") == 0)
   {
     instr = SUB;
+    operand_processor = &process_add;
   }
   else if (strcmp(instr_str, "subs") == 0)
   {
     instr = SUBS;
+    operand_processor = &process_add;
   }
   else if (strcmp(instr_str, "cmp") == 0)
   {
     instr = CMP;
+    operand_processor = &process_cmp;
   }
   else if (strcmp(instr_str, "cmn") == 0)
   {
     instr = CMN;
+    operand_processor = &process_cmp;
   }
   else if (strcmp(instr_str, "neg") == 0)
   {
     instr = NEG;
+    operand_processor = &process_cmp;
   }
   else if (strcmp(instr_str, "negs") == 0)
   {
     instr = NEGS;
+    operand_processor = &process_cmp;
   }
   else if (strcmp(instr_str, "and") == 0)
   {
     instr = AND;
+    operand_processor = &process_and;
+
   }
   else if (strcmp(instr_str, "ands") == 0)
   {
     instr = ANDS;
+    operand_processor = &process_and;
+
   }
   else if (strcmp(instr_str, "bic") == 0)
   {
     instr = BIC;
+    operand_processor = &process_and;
+
   }
   else if (strcmp(instr_str, "bics") == 0)
   {
     instr = BICS;
+    operand_processor = &process_and;
   }
   else if (strcmp(instr_str, "eor") == 0)
   {
     instr = EOR;
+    operand_processor = &process_and;
   }
   else if (strcmp(instr_str, "orr") == 0)
   {
     instr = ORR;
+    operand_processor = &process_and;
   }
   else if (strcmp(instr_str, "eon") == 0)
   {
     instr = EON;
+    operand_processor = &process_and;
   }
   else if (strcmp(instr_str, "orn") == 0)
   {
     instr = ORN;
+    operand_processor = &process_and;
   }
   else if (strcmp(instr_str, "tst") == 0)
   {
     instr = TST;
+    operand_processor = &process_tst;
   }
   else if (strcmp(instr_str, "movk") == 0)
   {
     instr = MOVK;
+    operand_processor = &process_movx;
   }
   else if (strcmp(instr_str, "movn") == 0)
   {
     instr = MOVN;
+    operand_processor = &process_movx;
   }
   else if (strcmp(instr_str, "movz") == 0)
   {
     instr = MOVZ;
+    operand_processor = &process_movx;
   }
   else if (strcmp(instr_str, "mov") == 0)
   {
     instr = MOV;
+    operand_processor = &process_mov;
   }
   else if (strcmp(instr_str, "mvn") == 0)
   {
     instr = MVN;
+    operand_processor = &process_mvn;
   }
   else if (strcmp(instr_str, "madd") == 0)
   {
     instr = MADD;
+    operand_processor = &process_madd;
   }
   else if (strcmp(instr_str, "msub") == 0)
   {
     instr = MSUB;
+    operand_processor = &process_madd;
   }
   else if (strcmp(instr_str, "mul") == 0)
   {
     instr = MUL;
+    operand_processor = &process_mul;
   }
   else if (strcmp(instr_str, "mneg") == 0)
   {
     instr = MNEG;
+    operand_processor = &process_mul;
   }
   else if (strcmp(instr_str, "b") == 0)
   {
     instr = B;
+    operand_processor = &process_b;
   }
-  else if (strcmp(instr_str, "b.cond") == 0)
+  else if (strcmp(instr_str, "b.") == 0)
   {
     instr = BCOND;
+    operand_processor = &process_b;
   }
   else if (strcmp(instr_str, "br") == 0)
   {
     instr = BR;
+    operand_processor = &process_br;
   }
   else if (strcmp(instr_str, "str") == 0)
   {
     instr = STR;
+    operand_processor = &process_str;
   }
   else if (strcmp(instr_str, "ldr") == 0)
   {
     instr = LDR;
+    if (current_operands.count == 2) {
+      operand_processor = &process_ldr;
+    } else {
+      operand_processor = &process_str;
+    }
   }
   else if (strcmp(instr_str, "nop") == 0)
   {
@@ -338,12 +512,17 @@ token_line process_line(char * line) {
   else if (strcmp(instr_str, ".int") == 0)
   { 
     instr = DIR;
+    operand_processor = &process_dir;
   }
   else /* default: */
   {
     instr = UNRECOGNISED;
   }
 
+  
+  if (operand_processor != NULL) {
+    operand_processor(current_operands);
+  }
   token_line current_line = {instr, current_operands};
   return current_line;
 }
