@@ -538,7 +538,6 @@ token_line process_line(char * line) {
   operand *current_operands;
   token_line current_line;
 
-  operand current_operands[word_count];
   for (int i = 0; i < word_count; i++) {
     current_operands[i].word = words[i];
   }
