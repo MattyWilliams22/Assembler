@@ -379,7 +379,7 @@ void data_processing_register(instruction instr) {
           STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
           STATE.pstate.z = (result == 0);
           STATE.pstate.c = (result < op) || (result < op2);
-          STATE.pstate.v = ((op >> (sf ? 63 : 31)) & 0x1) && ((op2 >> (sf ? 63 : 31)) & 0x1);
+          STATE.pstate.v = (op < 0 && op2 < 0 && result >= 0) || (op >= 0 && op2 >= 0 && result < 0);
           break;
 
         case 0x2:  // SUB
