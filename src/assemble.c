@@ -23,28 +23,35 @@ typedef enum {
   DIR,
   HALT,
   UNRECOGNISED
-} instr_name;
+} opcode_name;
 
 typedef enum {
   REG,
+  // May need to differentiate between IMM and SIMM
   IMM,
   SHIFT,
-  LITERAL,
+  ADDR,
+  LABEL,
   UNRECOGNISED
 } operand_type;
 
 typedef struct {
-  int count;
-  operand_type types[10];
-  char * words[10];
-} operands;
+  operand_type type;
+  char *word;
+} operand;
 
 typedef struct {
-  instr_name opcode;
-  operands operands;
+  opcode_name opcode;
+  operand *operands;
+  int operand_count;
 } token_line;
 
-int nlines;
+typedef int binary;
+
+typedef struct {
+  binary *pieces;
+  int piece_count;
+} binary_line;
 
 
 
@@ -153,16 +160,43 @@ bool exists_in_table(Symbol_Table *table, Key key) {
 
 
 
+// Applies the shift to the binary input
+binary do_SHIFT(operand shift, binary input) {
+  
+}
 
 
+// Converts an opcode to its binary representation
+binary convert_OPCODE(opcode_name name) {
 
+}
 
+// Converts a register to its binary representation
+binary convert_REG(operand op) {
+  
+}
 
+// Converts an immediate value to its binary representation
+binary convert_IMM(operand op) {
+  
+}
 
+// Converts an address to its binary representation
+binary convert_ADDR(operand op) {
+  
+}
 
+// Converts a label to its binary representation
+binary convert_LABEL(operand op) {
+  
+}
 
+// Converts an operand to its binary representation
+binary convert_OPERAND(operand op) {
 
+}
 
+// Counts the number of lines of text in the file given by fp
 int count_lines(FILE *fp) {
   int count = 0;
   char c;
@@ -174,156 +208,206 @@ int count_lines(FILE *fp) {
   return count;
 }
 
-char *process_add(operands ops) {
-  ops.types[0] = REG;
-  ops.types[1] = REG;
-  if (ops.words[2][0] == '#') {
-    ops.types[2] = IMM;
-    if (ops.words[3] != NULL) {
+// get_types_... functions get the types of every operand in the line
+// They are grouped by operand pattern as seen in table 2
+
+
+operand *get_types_add(operand *operands, int op_count) {
+  operands[0].type = REG;
+  operands[1].type = REG;
+  if (operands[2].word[0] == '#') {
+    operands[2].type = IMM;
+    if (op_count == 4) {
       // <Rd>, <Rn>, #<imm>, lsl #(0|12)
-      ops.types[3] = SHIFT;
-      ops.count = 4;
+      operands[3].type = SHIFT;
     } else {
       // <Rd>, <Rn>, #<imm>
-      ops.count = 3;
     }
   } else {
-    ops.types[2] = REG;
-    if (ops.words[3] != NULL) {
+    operands[2].type = REG;
+    if (op_count == 4) {
       // <Rd>, <Rn>, <Rm>, <shift> #<imm>
-      ops.types[3] = SHIFT;
-      ops.count = 4;
+      operands[3].type = SHIFT;
     } else {
       // <Rd>, <Rn>, <Rm>
-      ops.count = 3
     }
   }
 }
 
-char *process_cmp(operands ops) {
-
-  if (ops.words[1][0] == '#') {
+char *get_types_cmp(operand *operands, int op_count) {
+  operands[0].type = REG;
+  if (operands[1].word[0] == '#') {
     // <Rn>, #<imm>{, <lsl #(0|12)>}
-    if (ops.words[2] != NULL) {
+    operands[1].type = IMM;
+    if (op_count == 3) {
       // <Rn>, #<imm>, <lsl #(0|12)>
+      operands[2].type = SHIFT;
     } else {
       // <Rn>, #<imm>
     }
   } else {
     // <Rn>, <Rm>{, <shift> #<imm>}
-    if (ops.words[2] != NULL) {
+    operands[1].type == REG;
+    if (op_count == 3) {
       // <Rn>, <Rm>, <shift> #<imm>
+      operands[2].type = SHIFT;
     } else {
       // <Rn>, <Rm>
     }
   }
 }
 
-char *process_and(operands ops) {
+char *get_types_and(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>, <shift> #<imm>
+  operands[0].type = REG;
+  operands[1].type = REG;
+  operands[2].type = REG;
+  operands[3].type = IMM;
 }
 
-char *process_tst(operands ops) {
+char *get_types_tst(operand *operands, int op_count) {
   // <Rn>, <Rm>{, <shift> #<imm>}
-  if (ops.words[2] != NULL) {
+  operands[0].type = REG;
+  operands[1].type = REG;
+  if (op_count == 3) {
     // <Rn>, <Rm>, <shift> #<imm>
+    operands[2].type = SHIFT;
   } else {
     // <Rn>, <Rm>
   }
 }
 
-char *process_movx(operands ops) {
+char *get_types_movx(operand *operands, int op_count) {
   // <Rd>, #<imm>{, lsl #<imm>}
-  if (ops.words[2] != NULL) {
+  operands[0].type = REG;
+  operands[1].type = IMM;
+  if (op_count == 3) {
     // <Rd>, #<imm>, lsl #<imm>
+    operands[2].type = SHIFT;
   } else {
     // <Rd>, #<imm>
   }
 }
 
-char *process_mov(operands ops) {
+char *get_types_mov(operand *operands, int op_count) {
   // <Rd>, <Rn>
+  operands[0].type = REG;
+  operands[1].type = REG;
 }
 
-char *process_mvn(operands ops) {
+char *get_types_mvn(operand *operands, int op_count) {
   // <Rd>, <Rm>{, <shift> #<imm>}
-  if (ops.words[2] != NULL) {
+  operands[0].type = REG;
+  operands[1].type = REG;
+  if (op_count == 3) {
     // <Rd>, <Rm>, <shift> #<imm>
+    operands[2].type = SHIFT;
   } else {
     // <Rd>, <Rm>
   }
 }
   
 
-char *process_madd(operands ops) {
+char *get_types_madd(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>, <Ra>
+  operands[0].type = REG;
+  operands[1].type = REG;
+  operands[2].type = REG;
+  operands[3].type = REG;
 }
 
-char *process_mul(operands ops) {
+char *get_types_mul(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>
+  operands[0].type = REG;
+  operands[1].type = REG;
+  operands[2].type = REG;
 }
 
-char *process_b(operands ops) {
+char *get_types_b(operand *operands, int op_count) {
   // <literal>      (label or immediate address)
-  if (ops.words[0][0] == '0' && ops.words[0][1] == 'x') {
+  if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
     // <address>
+    operands[0].type = ADDR;
   } else {
     // <label>
+    operands[0].type = LABEL;
   }
 }
 
-char *process_br(operands ops) {
+char *get_types_br(operand *operands, int op_count) {
   // <Xn>
+  operands[0].type = REG;
 }
 
-char *process_str(operands ops) {
-  int length = strlen(ops.words[2]);
-  if (ops.words[2][length] == '!') {
-    // <Rt>, [<Xn>, #<simm>]!                  (Pre-index)
-  } else if (ops.words[2][length] != ']') {
-    // <Rt>, [<Xn>], #<simm>                   (Post-index)
-  } else if (ops.words[2][0] != '#') {
-    // <Rt>, [<Xn>], #<simm>                   (Post-index)
+char *get_types_str(operand *operands, int op_count) {
+  // Need to deal with [] somehow!
+
+  operands[0].type = REG;
+  operands[1].type = REG;
+  
+  int length = strlen(operands[2].word);
+  if (operands[2].word[length] == '!') {
+    // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
+    operands[2].type = IMM;                
+  } else if (operands[2].word[length] != ']') {
+    // <Rt>, [<Xn>], #<simm>                     (Post-index)
+    operands[2].type = IMM;
+  } else if (operands[2].word[0] == '#') {
+    // <Rt>, [<Xn|SP>, #<imm>]                   (Unsigned Offset)
+    operands[2].type = IMM;
   } else {
     // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
-    if (ops.words[3] != NULL) {
+    operands[2].type = REG;
+    if (op_count == 4) {
     // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
+    operands[3].type = SHIFT;
     } else {
     // <Rt>, [<Xn>, <Rm>]
     }
   }
 }
 
-char *process_ldr(operands ops) {
+char *get_types_ldr(operand *operands, int op_count) {
   // <Rt>, <literal>
+  operands[0].type = REG;
+  if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
+    // <Rt>, <address>
+    operands[1].type = ADDR;
+  } else {
+    // <Rt>, <label>
+    operands[1].type = LABEL;
+  }
 }
 
-char *process_dir(operands ops) {
+char *get_types_dir(operand *operands, int op_count) {
   // <simm>
+  operands[0].type = IMM;
 }
 
+
+// Converts a string into a token_line
 token_line process_line(char * line) {
   // Process a line from the .s file
   const char s[] = " "; 
   const char d[] = ".";
   char * instr_str = strktok(line, s);
   instr_str = strtok(instr_str, d);
-  int count = 0;
-  char *words[10];
+  int string_count = 0;
+  char *strings[10];
 
   for (char *q = strtok(NULL, d); q != NULL; q = strtok(NULL, d)) {
-    strcpy(words[count], q);
-    count++;
+    strcpy(strings[string_count], q);
+    string_count++;
   }
   
   for (char *p = strtok(line, s); p != NULL; p = strtok(NULL, s)) {
-    strcpy(words[count], p);
-    count++;
+    strcpy(strings[string_count], p);
+    string_count++;
   }
 
   char *sentence = "";
-  for (int i = 0; i < count; i++) {
-    char *current_word = words[i];  
+  for (int i = 0; i < string_count; i++) {
+    char *current_word = strings[i];  
     int length = strlen(current_word);
     strcat(sentence, current_word);
     if (current_word[length] != ',') {
@@ -331,202 +415,215 @@ token_line process_line(char * line) {
     }
   }
 
+  int word_count = 0;
+  char *words;
   const char c[] = ",";
-  operands current_operands;
-  current_operands.count = 0;
+
   for (char *p = strtok(sentence, c); p != NULL; p = strtok(NULL, c)) {
-    strcpy(current_operands.words[current_operands.count], p);
-    current_operands.count++;
+    strcpy(words[word_count], p);
+    word_count++;
   }
 
-  typedef char (*func_ptr)(operands);
-  func_ptr operand_processor;
-  instr_name instr;
+  typedef operand * (*func_ptr)(operand *, int);
+  func_ptr get_types;
+  opcode_name opcode;
 
   if (strcmp(instr_str, "add") == 0) 
   {
-    instr = ADD;
-    operand_processor = &process_add;
+    opcode = ADD;
+    get_types = &get_types_add;
   } 
   else if (strcmp(instr_str, "adds") == 0)
   {
-    instr = ADDS;
-    operand_processor = &process_add;
+    opcode = ADDS;
+    get_types = &get_types_add;
   }
   else if (strcmp(instr_str, "sub") == 0)
   {
-    instr = SUB;
-    operand_processor = &process_add;
+    opcode = SUB;
+    get_types = &get_types_add;
   }
   else if (strcmp(instr_str, "subs") == 0)
   {
-    instr = SUBS;
-    operand_processor = &process_add;
+    opcode = SUBS;
+    get_types = &get_types_add;
   }
   else if (strcmp(instr_str, "cmp") == 0)
   {
-    instr = CMP;
-    operand_processor = &process_cmp;
+    opcode = CMP;
+    get_types = &get_types_cmp;
   }
   else if (strcmp(instr_str, "cmn") == 0)
   {
-    instr = CMN;
-    operand_processor = &process_cmp;
+    opcode = CMN;
+    get_types = &get_types_cmp;
   }
   else if (strcmp(instr_str, "neg") == 0)
   {
-    instr = NEG;
-    operand_processor = &process_cmp;
+    opcode = NEG;
+    get_types = &get_types_cmp;
   }
   else if (strcmp(instr_str, "negs") == 0)
   {
-    instr = NEGS;
-    operand_processor = &process_cmp;
+    opcode = NEGS;
+    get_types = &get_types_cmp;
   }
   else if (strcmp(instr_str, "and") == 0)
   {
-    instr = AND;
-    operand_processor = &process_and;
+    opcode = AND;
+    get_types = &get_types_and;
 
   }
   else if (strcmp(instr_str, "ands") == 0)
   {
-    instr = ANDS;
-    operand_processor = &process_and;
+    opcode = ANDS;
+    get_types = &get_types_and;
 
   }
   else if (strcmp(instr_str, "bic") == 0)
   {
-    instr = BIC;
-    operand_processor = &process_and;
+    opcode = BIC;
+    get_types = &get_types_and;
 
   }
   else if (strcmp(instr_str, "bics") == 0)
   {
-    instr = BICS;
-    operand_processor = &process_and;
+    opcode = BICS;
+    get_types = &get_types_and;
   }
   else if (strcmp(instr_str, "eor") == 0)
   {
-    instr = EOR;
-    operand_processor = &process_and;
+    opcode = EOR;
+    get_types = &get_types_and;
   }
   else if (strcmp(instr_str, "orr") == 0)
   {
-    instr = ORR;
-    operand_processor = &process_and;
+    opcode = ORR;
+    get_types = &get_types_and;
   }
   else if (strcmp(instr_str, "eon") == 0)
   {
-    instr = EON;
-    operand_processor = &process_and;
+    opcode = EON;
+    get_types = &get_types_and;
   }
   else if (strcmp(instr_str, "orn") == 0)
   {
-    instr = ORN;
-    operand_processor = &process_and;
+    opcode = ORN;
+    get_types = &get_types_and;
   }
   else if (strcmp(instr_str, "tst") == 0)
   {
-    instr = TST;
-    operand_processor = &process_tst;
+    opcode = TST;
+    get_types = &get_types_tst;
   }
   else if (strcmp(instr_str, "movk") == 0)
   {
-    instr = MOVK;
-    operand_processor = &process_movx;
+    opcode = MOVK;
+    get_types = &get_types_movx;
   }
   else if (strcmp(instr_str, "movn") == 0)
   {
-    instr = MOVN;
-    operand_processor = &process_movx;
+    opcode = MOVN;
+    get_types = &get_types_movx;
   }
   else if (strcmp(instr_str, "movz") == 0)
   {
-    instr = MOVZ;
-    operand_processor = &process_movx;
+    opcode = MOVZ;
+    get_types = &get_types_movx;
   }
   else if (strcmp(instr_str, "mov") == 0)
   {
-    instr = MOV;
-    operand_processor = &process_mov;
+    opcode = MOV;
+    get_types = &get_types_mov;
   }
   else if (strcmp(instr_str, "mvn") == 0)
   {
-    instr = MVN;
-    operand_processor = &process_mvn;
+    opcode = MVN;
+    get_types = &get_types_mvn;
   }
   else if (strcmp(instr_str, "madd") == 0)
   {
-    instr = MADD;
-    operand_processor = &process_madd;
+    opcode = MADD;
+    get_types = &get_types_madd;
   }
   else if (strcmp(instr_str, "msub") == 0)
   {
-    instr = MSUB;
-    operand_processor = &process_madd;
+    opcode = MSUB;
+    get_types = &get_types_madd;
   }
   else if (strcmp(instr_str, "mul") == 0)
   {
-    instr = MUL;
-    operand_processor = &process_mul;
+    opcode = MUL;
+    get_types = &get_types_mul;
   }
   else if (strcmp(instr_str, "mneg") == 0)
   {
-    instr = MNEG;
-    operand_processor = &process_mul;
+    opcode = MNEG;
+    get_types = &get_types_mul;
   }
   else if (strcmp(instr_str, "b") == 0)
   {
-    instr = B;
-    operand_processor = &process_b;
+    opcode = B;
+    get_types = &get_types_b;
   }
   else if (strcmp(instr_str, "b.") == 0)
   {
-    instr = BCOND;
-    operand_processor = &process_b;
+    opcode = BCOND;
+    get_types = &get_types_b;
   }
   else if (strcmp(instr_str, "br") == 0)
   {
-    instr = BR;
-    operand_processor = &process_br;
+    opcode = BR;
+    get_types = &get_types_br;
   }
   else if (strcmp(instr_str, "str") == 0)
   {
-    instr = STR;
-    operand_processor = &process_str;
+    opcode = STR;
+    get_types = &get_types_str;
   }
   else if (strcmp(instr_str, "ldr") == 0)
   {
-    instr = LDR;
-    if (current_operands.count == 2) {
-      operand_processor = &process_ldr;
+    opcode = LDR;
+    if (word_count == 2) {
+      get_types = &get_types_ldr;
     } else {
-      operand_processor = &process_str;
+      get_types = &get_types_str;
     }
   }
   else if (strcmp(instr_str, "nop") == 0)
   {
-    instr = NOP;
+    opcode = NOP;
   }
   else if (strcmp(instr_str, ".int") == 0)
   { 
-    instr = DIR;
-    operand_processor = &process_dir;
+    opcode = DIR;
+    get_types = &get_types_dir;
   }
   else /* default: */
   {
-    instr = UNRECOGNISED;
+    opcode = UNRECOGNISED;
   }
 
-  
-  if (operand_processor != NULL) {
-    operand_processor(current_operands);
+
+  operand *current_operands;
+  token_line current_line;
+
+  operand current_operands[word_count];
+  for (int i = 0; i < word_count; i++) {
+    current_operands[i].word = words[i];
   }
-  token_line current_line = {instr, current_operands};
+
+  if (get_types != NULL) {
+    current_operands = get_types(current_operands, word_count);
+    current_line.opcode = opcode;
+    current_line.operands = current_operands;
+    current_line.operand_count = word_count;
+  }
+
   return current_line;
 }
 
+// Reads an assembly code file and processes each line into a token_line
 token_line *read_assembly(FILE *fp, int nlines) {
   char * line = NULL;
   size_t len = 0;
@@ -544,14 +641,18 @@ token_line *read_assembly(FILE *fp, int nlines) {
   return token_lines;
 }
 
-void function_assembler(token_line * token_lines, int nlines) {
-  // Assemble instructions of each type
-}
-
-void write_to_binary_file(FILE *fp, int lines[]) {
-  for(int i = 0; i<nlines; i++) {
-    fprintf(fp, "%d", lines[i]);
+// Writes an array of binary_lines to the file given by fp
+void write_to_binary_file(FILE *fp, binary_line *binary_lines, int nlines) {
+  for(int i = 0; i < nlines; i++) {
+    binary_line current_line = binary_lines[i];
+    char *output_line;
+    for (int j = 0; j < current_line.piece_count; j++) {
+      strcat(output_line, current_line.pieces[j]);
+    }
+    fprintf(fp, "%d", output_line);
   }
+
+  fclose(fp);
 }
 
 int main(int argc, char **argv) {
@@ -561,12 +662,24 @@ int main(int argc, char **argv) {
 		perror("Could not open input file.");
 		exit(EXIT_FAILURE);
 	}
-  nlines = count_lines(input);
+
+  // Get number of lines in input file
+  int nlines = count_lines(input);
+
+  // Convert lines of file to an array of token_lines
   token_line *token_lines = read_assembly(input, nlines);
 
-  // Assemble instructions using function_assembler 
-  // Either one or two-pass process
-  int binary_lines[nlines];
+  // Convert token_lines to binary_lines
+  binary *binary_lines[nlines];
+  for (int i = 0; i < nlines; i++) {
+    token_line current_t_line = token_lines[i];
+    binary_line current_b_line;
+    current_b_line.pieces[0] = convert_OPCODE(current_t_line.opcode);
+    current_b_line.piece_count = 1;
+    for (int j = 0; j < current_t_line.operand_count; j++) {
+      current_b_line.pieces[current_b_line.piece_count] = convert_OPERAND(current_t_line.operands[j]);
+    }
+  }
 
 
   FILE* output = fopen(argv[2], "wb+");
@@ -575,7 +688,8 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-  write_to_binary_file(output, binary_lines);
+  // Writes binary_lines to output file
+  write_to_binary_file(output, binary_lines, nlines);
 
   return EXIT_SUCCESS;
 }
