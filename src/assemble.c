@@ -428,179 +428,109 @@ token_line process_line(char * line) {
   func_ptr get_types;
   opcode_name opcode;
 
-  if (strcmp(instr_str, "add") == 0) 
-  {
+  if (strcmp(instr_str, "add") == 0) {
     opcode = ADD;
     get_types = &get_types_add;
-  } 
-  else if (strcmp(instr_str, "adds") == 0)
-  {
+  } else if (strcmp(instr_str, "adds") == 0) {
     opcode = ADDS;
     get_types = &get_types_add;
-  }
-  else if (strcmp(instr_str, "sub") == 0)
-  {
+  } else if (strcmp(instr_str, "sub") == 0) {
     opcode = SUB;
     get_types = &get_types_add;
-  }
-  else if (strcmp(instr_str, "subs") == 0)
-  {
+  } else if (strcmp(instr_str, "subs") == 0) {
     opcode = SUBS;
     get_types = &get_types_add;
-  }
-  else if (strcmp(instr_str, "cmp") == 0)
-  {
+  } else if (strcmp(instr_str, "cmp") == 0) {
     opcode = CMP;
     get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "cmn") == 0)
-  {
+  } else if (strcmp(instr_str, "cmn") == 0) {
     opcode = CMN;
     get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "neg") == 0)
-  {
+  } else if (strcmp(instr_str, "neg") == 0) {
     opcode = NEG;
     get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "negs") == 0)
-  {
+  } else if (strcmp(instr_str, "negs") == 0) {
     opcode = NEGS;
     get_types = &get_types_cmp;
-  }
-  else if (strcmp(instr_str, "and") == 0)
-  {
+  } else if (strcmp(instr_str, "and") == 0) {
     opcode = AND;
     get_types = &get_types_and;
-
-  }
-  else if (strcmp(instr_str, "ands") == 0)
-  {
+  } else if (strcmp(instr_str, "ands") == 0) {
     opcode = ANDS;
     get_types = &get_types_and;
-
-  }
-  else if (strcmp(instr_str, "bic") == 0)
-  {
+  } else if (strcmp(instr_str, "bic") == 0) {
     opcode = BIC;
     get_types = &get_types_and;
-
-  }
-  else if (strcmp(instr_str, "bics") == 0)
-  {
+  } else if (strcmp(instr_str, "bics") == 0) {
     opcode = BICS;
     get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "eor") == 0)
-  {
+  } else if (strcmp(instr_str, "eor") == 0) {
     opcode = EOR;
     get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "orr") == 0)
-  {
+  } else if (strcmp(instr_str, "orr") == 0) {
     opcode = ORR;
     get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "eon") == 0)
-  {
+  } else if (strcmp(instr_str, "eon") == 0) {
     opcode = EON;
     get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "orn") == 0)
-  {
+  } else if (strcmp(instr_str, "orn") == 0) {
     opcode = ORN;
     get_types = &get_types_and;
-  }
-  else if (strcmp(instr_str, "tst") == 0)
-  {
+  } else if (strcmp(instr_str, "tst") == 0) {
     opcode = TST;
     get_types = &get_types_tst;
-  }
-  else if (strcmp(instr_str, "movk") == 0)
-  {
+  } else if (strcmp(instr_str, "movk") == 0) {
     opcode = MOVK;
     get_types = &get_types_movx;
-  }
-  else if (strcmp(instr_str, "movn") == 0)
-  {
+  } else if (strcmp(instr_str, "movn") == 0) {
     opcode = MOVN;
     get_types = &get_types_movx;
-  }
-  else if (strcmp(instr_str, "movz") == 0)
-  {
+  } else if (strcmp(instr_str, "movz") == 0) {
     opcode = MOVZ;
     get_types = &get_types_movx;
-  }
-  else if (strcmp(instr_str, "mov") == 0)
-  {
+  } else if (strcmp(instr_str, "mov") == 0) {
     opcode = MOV;
     get_types = &get_types_mov;
-  }
-  else if (strcmp(instr_str, "mvn") == 0)
-  {
+  } else if (strcmp(instr_str, "mvn") == 0) {
     opcode = MVN;
     get_types = &get_types_mvn;
-  }
-  else if (strcmp(instr_str, "madd") == 0)
-  {
+  } else if (strcmp(instr_str, "madd") == 0) {
     opcode = MADD;
     get_types = &get_types_madd;
-  }
-  else if (strcmp(instr_str, "msub") == 0)
-  {
+  } else if (strcmp(instr_str, "msub") == 0) {
     opcode = MSUB;
     get_types = &get_types_madd;
-  }
-  else if (strcmp(instr_str, "mul") == 0)
-  {
+  } else if (strcmp(instr_str, "mul") == 0) {
     opcode = MUL;
     get_types = &get_types_mul;
-  }
-  else if (strcmp(instr_str, "mneg") == 0)
-  {
+  } else if (strcmp(instr_str, "mneg") == 0) {
     opcode = MNEG;
     get_types = &get_types_mul;
-  }
-  else if (strcmp(instr_str, "b") == 0)
-  {
+  } else if (strcmp(instr_str, "b") == 0) {
     opcode = B;
     get_types = &get_types_b;
-  }
-  else if (strcmp(instr_str, "b.") == 0)
-  {
+  } else if (strcmp(instr_str, "b.") == 0) {
     opcode = BCOND;
     get_types = &get_types_b;
-  }
-  else if (strcmp(instr_str, "br") == 0)
-  {
+  } else if (strcmp(instr_str, "br") == 0) {
     opcode = BR;
     get_types = &get_types_br;
-  }
-  else if (strcmp(instr_str, "str") == 0)
-  {
+  } else if (strcmp(instr_str, "str") == 0) {
     opcode = STR;
     get_types = &get_types_str;
-  }
-  else if (strcmp(instr_str, "ldr") == 0)
-  {
+  } else if (strcmp(instr_str, "ldr") == 0) {
     opcode = LDR;
     if (word_count == 2) {
       get_types = &get_types_ldr;
     } else {
       get_types = &get_types_str;
     }
-  }
-  else if (strcmp(instr_str, "nop") == 0)
-  {
+  } else if (strcmp(instr_str, "nop") == 0) {
     opcode = NOP;
-  }
-  else if (strcmp(instr_str, ".int") == 0)
-  { 
+  } else if (strcmp(instr_str, ".int") == 0) { 
     opcode = DIR;
     get_types = &get_types_dir;
-  }
-  else /* default: */
-  {
+  } else /* default: */ {
     opcode = UNRECOGNISED;
   }
 
