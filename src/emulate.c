@@ -388,9 +388,14 @@ void data_processing_register(instruction instr) {
 
         case 0x3:  // SUBS
           result = op - op2;
+
           STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
           STATE.pstate.z = (result == 0);
-          STATE.pstate.c = (op >= op2);
+          if (sf == 1) {
+            STATE.pstate.c = (op >= op2);
+          } else {
+            STATE.pstate.c = (unsigned) op >= (unsigned) op2;
+          }
           STATE.pstate.v = (((op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((op ^ op2) >> (sf ? 63 : 31)) & 0x1);
           break;
       }
