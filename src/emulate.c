@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "prototypes.h"
+#include "emulate.h"
 
 // Readable aliases for types
 typedef uint64_t reg;
@@ -26,7 +26,7 @@ typedef struct {
   bool v : 1;
 } pstate;
 
-// Special Registers
+// Modelling the state of memory and all registers
 typedef struct {
   reg registers[NUMBER_OF_REGISTERS];
   pstate pstate;
@@ -37,6 +37,10 @@ typedef struct {
 
 state STATE;
 
+/**
+ * Initialises all registers, special registers, and memory addresses to the starting value 0,
+ * apart from the zero flag which is initialised to a 1
+ */
 void initialise_memory(void) {
   // Set program counter to 0
   STATE.pc = 0;
@@ -58,8 +62,12 @@ void initialise_memory(void) {
   }
 }
 
+/**
+ * Reads in the binary contents of a given file into memory.
+ *
+ * @param filename The name of the file to read in.
+ */
 void read_from_file(char* filename) {
-  // Load binary file into memory
   FILE *fp;
 
   fp = fopen(filename, "rb");
@@ -72,7 +80,12 @@ void read_from_file(char* filename) {
   fclose(fp);
 }
 
-// Decode instruction using bits 28 to 25 in instruction.
+/**
+ * Decodes a given instruction into one of the below categories by using bits 28 to 25 of the instruction.
+ *
+ * @param instr The instruction to decode.
+ * @return A function pointer to the function which will be able to process the given instruction.
+ */
 funcptr decode(instruction instr) {
   // Extract bits 28 to 25
   byte bits_28_to_25 = (instr >> 25) & 0xf;
@@ -103,16 +116,21 @@ funcptr decode(instruction instr) {
   }
 }
 
+/**
+ * Loops through each memory address one by one, processing and executing each instruction.
+ */
 void process_instructions(void) {
   int i = 0;
   instruction instr;
-  typedef void (*func_ptr)(instruction);
-  func_ptr decoded_func;
+  funcptr decoded_func;
 
+  // Loop through memory until you reach HALT instruction
   while (instr != HALT) {
+    // If PC is a multiple of 4, just read in the next address as the next instruction
     if (STATE.pc % 4 == 0) {
       i = STATE.pc / 4;
       instr = STATE.memory[i];
+    // If PC is not a multiple of 4, the next instruction has to be read over the next two addresses
     } else {
       // Most significiant (4 - mod) bytes at address stored will be the lowest (4 - mod) bytes of instruction
       int mod = STATE.pc % 4; // mod/4 of the way into address
@@ -141,7 +159,46 @@ void process_instructions(void) {
   }
 }
 
-// Data Processing Immediate
+/**
+ * Given the "sf" bit of an instruction, turns the given operand into 32 bits or 64 bits.
+ *
+ * @param sf A single bit which decides if the operand should be accessed as a 32-bit value or 64-bit
+ *           value. If sf == 1, 64-bit, else 32-bit.
+ * @param operand The operand to be accessed.
+ * @return The operand as a 32-bit number or 64-bit number based on the value of sf.
+ */
+reg choose_access_mode(byte sf, reg operand) {
+  return (sf ? operand : operand & 0xffffffff);
+}
+
+/**
+ * Sign or zero extends the given operand based on the type_of_extension specified.
+ *
+ * @param operand The number to be extended.
+ * @param size_in_bits The size of the number to be extended in bits.
+ * @param type_of_extension The type of extension to be perform. 0 if zero extension or 1 if sign extension
+ * @return The operand either sign or zero extended
+ */
+reg sign_or_zero_extend(int operand, byte size_in_bits, bool type_of_extension) {
+  bool sign_bit;
+
+  if (type_of_extension == 0) {
+    sign_bit = 0;
+  } else {
+    sign_bit = (operand >> (size_in_bits - 1)) & 0x1;
+  }
+  int mask = sign_bit << (size_in_bits - 1);
+  int extended = (operand ^ mask) - mask;
+
+  return extended;
+}
+
+
+/**
+ * Given an instruction of the type "Data Processing Immediate", processes and executes the instruction.
+ *
+ * @param instr The "Data Processing Immediate" instruction to be executed
+ */
 void data_processing_immediate(instruction instr) {
   // Extract bit 31
   byte sf = (instr >> 31) & 0x1;
@@ -163,39 +220,33 @@ void data_processing_immediate(instruction instr) {
     // Extract bits 9-5
     byte rn = (instr >> 5) & 0x1f;
 
-    uint64_t op = imm12 << 12;
-    reg reg_op;
+    uint64_t op = (sh ? (imm12 << 12) : imm12);
+    reg reg_op = choose_access_mode(sf, STATE.registers[rn]);
 
-    if (sf == 0) { // 32-bit accesss mode
-      reg_op = STATE.registers[rn] & 0xffffffff;
-    } else { // 64-bit access mode
-      reg_op = STATE.registers[rn];
-    }
-
-    // Calculate the result based on the opcode
+    // Decide which type of operation to perform based on the opcode
     switch (opc) {
       case 0x0:  // ADD
-        result = reg_op + (sh ? op : imm12);
+        result = reg_op + op;
         break;
 
       case 0x1:  // ADDS
-        result = reg_op + (sh ? op : imm12);
+        result = reg_op + op;
         STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
         STATE.pstate.z = (result == 0);
         STATE.pstate.c = (result < reg_op);
-        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
+        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ op) >> (sf ? 63 : 31)) & 0x1);
         break;
 
       case 0x2:  // SUB
-        result = reg_op - (sh ? op : imm12);
+        result = reg_op - op;
         break;
 
       case 0x3:  // SUBS
-        result = reg_op - (sh ? op : imm12);
+        result = reg_op - op;
         STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
         STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (reg_op >= (sh ? op : imm12));
-        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ (sh ? op : imm12)) >> (sf ? 63 : 31)) & 0x1);
+        STATE.pstate.c = (reg_op >= op);
+        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ op) >> (sf ? 63 : 31)) & 0x1);
         break;
     }
   }
@@ -219,25 +270,28 @@ void data_processing_immediate(instruction instr) {
         // MOVZ
         result = operand;
         break;
-      case 0x3:
+      case 0x3: {
         // MOVK
         uint64_t mask = 0xffff;
         result = (STATE.registers[rd] & ~(mask << (hw * 16))) | (imm16 << (hw * 16));
         break;
+      }
     }
   }
 
-  // Store the result in the destination register
+  // If rd == 31 then it encodes the zero register and so the result should not be stored as
+  // cannot write to the zero register
   if (rd != 31) {
-    if (sf == 0) { // 32-bit mode
-      STATE.registers[rd] = result & 0xffffffff;
-    } else { // 64-bit mode
-      STATE.registers[rd] = result;
-    }
+    // Store the result in the destination register
+    STATE.registers[rd] = choose_access_mode(sf, result);
   }
 }
 
-// Data Processing Register
+/**
+ * Given an instruction of the type "Data Processing Register", processes and executes the instruction.
+ *
+ * @param instr The "Data Processing Register" instruction to be executed
+ */
 void data_processing_register(instruction instr) {
   // Extract bit 31
   byte sf = (instr >> 31) & 0x1;
@@ -259,23 +313,12 @@ void data_processing_register(instruction instr) {
   reg result = rn;
 
   // Logic and Arithmetic Instructions
-
   if (M == 0) {
     // Extract bits 23-22
     byte shift_type = (instr >> 22) & 0x3;
-    reg op2;
-
-    // Check if encodes zero register
-    if (rm == 31) {
-      op2 = 0;
-    } else {
-      if (sf == 0) { // 32-bit accesss mode
-        op2 = STATE.registers[rm] & 0xffffffff;
-      } else { // 64-bit access mode
-        op2 = STATE.registers[rm];
-      }
-    }
-    
+    reg op2 = choose_access_mode(sf, (rm == 31 ? 0 : STATE.registers[rm]));
+  
+    // Decide which type of shift needs to be performed
     switch (shift_type) {
       case 0x0:
         // LSL
@@ -285,7 +328,7 @@ void data_processing_register(instruction instr) {
         // LSR
         op2 = op2 >> operand;
         break;
-      case 0x2:
+      case 0x2: {
         // ASR
         long int sign_bit = (op2 >> (sf ? 63 : 31)) & 0x1;
         
@@ -294,28 +337,23 @@ void data_processing_register(instruction instr) {
         // Sign extend
         long int mask = sign_bit << ((sf ? 63 : 31) - operand);
         op2 = (op2 ^ mask) - mask;
-
         break;
-      case 0x3:
+      }
+      case 0x3: {
         // ROR
         reg rotated = op2 << ((sf ? 64 : 32) - operand);
 
         op2 = (op2 >> operand) | rotated;
         break;
+      }
     }
 
     // Logical Instructions
-
     if (((instr >> 24) & 0x1) == 0) {
       // Extract bit 21
       bool N = (instr >> 21) & 0x1;
-      long int op1;
-
-      if (sf == 0) { // 32-bit access mode
-        op1 = (rn == 31 ? 0 : STATE.registers[rn]) & 0xffffffff;
-      } else { // 64-bit access mode
-        op1 = (rn == 31 ? 0 : STATE.registers[rn]);
-      }
+      
+      long int op1 = choose_access_mode(sf, (rn == 31 ? 0 : STATE.registers[rn]));
       
       switch (opc) {
         case 0x0:
@@ -361,14 +399,9 @@ void data_processing_register(instruction instr) {
 
     // Arithmetic Instructions
     if ((((instr >> 24) & 0x1) == 1) && (((instr >> 21) & 0x1) == 0)) {
-      long int op;
+      long int op = choose_access_mode(sf, (rn == 31 ? 0 : STATE.registers[rn]));
 
-      if (sf == 0) { // 32-bit access mode
-        op = (rn == 31 ? 0 : STATE.registers[rn]) & 0xffffffff;
-      } else { // 64-bit access mode
-        op = (rn == 31 ? 0 : STATE.registers[rn]);
-      }
-
+      // Decide which type of operation to perform based on the opcode
       switch (opc) {
         case 0x0:  // ADD
           result = op + op2;
@@ -409,19 +442,9 @@ void data_processing_register(instruction instr) {
     // Extract bits 14-10
     byte ra = (instr >> 10) & 0x1f;
 
-    uint64_t op;
-    uint64_t op1;
-    uint64_t op2;
-
-    if (sf == 0) { // 32-bit access mode
-      op = (ra == 31 ? 0 : STATE.registers[ra]) & 0xffffffff;
-      op1 = (rn == 31 ? 0 : STATE.registers[rn]) & 0xffffffff;
-      op2 = (rm == 31 ? 0 : STATE.registers[rm]) & 0xffffffff;
-    } else { // 64-bit access mode
-      op = (ra == 31 ? 0 : STATE.registers[ra]);
-      op1 = (rn == 31 ? 0 : STATE.registers[rn]);
-      op2 = (rm == 31 ? 0 : STATE.registers[rm]);
-    }
+    uint64_t op = choose_access_mode(sf, (ra == 31 ? 0 : STATE.registers[ra]));
+    uint64_t op1 = choose_access_mode(sf, (rn == 31 ? 0 : STATE.registers[rn]));
+    uint64_t op2 = choose_access_mode(sf, (rm == 31 ? 0 : STATE.registers[rm]));
 
     if (x == 0) {
       // MADD
@@ -432,16 +455,19 @@ void data_processing_register(instruction instr) {
     }
   }
   
-  if (rd != 31) { // Encodes zero register
-    if (sf == 0) { // 32-bit mode
-      STATE.registers[rd] = result & 0xffffffff;
-    } else { // 64-bit mode
-      STATE.registers[rd] = result;
-    }
+  // If rd == 31 then it encodes the zero register and so the result should not be stored as
+  // cannot write to the zero register
+  if (rd != 31) {
+    // Store the result in the destination register
+    STATE.registers[rd] = choose_access_mode(sf, result);
   }
 }
 
-// Single Data Transfer
+/**
+ * Given an instruction of the type "Single Data Transfer", processes and executes the instruction.
+ *
+ * @param instr The "Single Data Transfer" instruction to be executed
+ */
 void single_data_transfer(instruction instr) {
   // Extract bit 31
   byte load_lit = (instr >> 31) & 0x1;
@@ -460,10 +486,6 @@ void single_data_transfer(instruction instr) {
   // Extract bits 4 to 0
   byte rt = instr  & 0x1f;
 
-  bool sign_bit;
-  int mask;
-  int extended;
-
   reg address;
 
   // Load Literal
@@ -472,9 +494,7 @@ void single_data_transfer(instruction instr) {
     int simm19 = (instr >> 5) & 0x7ffff;
 
     // Sign extend to 64 bits
-    sign_bit = (simm19 >> 18) & 0x1;
-    mask = sign_bit << 18;
-    extended = (simm19 ^ mask) - mask;
+    int extended = sign_or_zero_extend(simm19, 19, 1);
 
     address = STATE.pc + (extended * 4);
   } else {
@@ -484,10 +504,7 @@ void single_data_transfer(instruction instr) {
       int imm12 = (instr >> 10) & 0xfff;
 
       // Zero extend to 64 bits
-      sign_bit = (imm12 >> 11) & 0x1;
-      mask = sign_bit << 11;
-      extended = (imm12 ^ mask) - mask;
-    
+      int extended = sign_or_zero_extend(imm12, 12, 0);
 
       address = STATE.registers[xn] + (extended * 8);
     // Register Offset
@@ -502,9 +519,7 @@ void single_data_transfer(instruction instr) {
       int simm9 = (instr >> 12) & 0x1ff;
 
       // Sign extend to 64 bits
-      sign_bit = (simm9 >> 8) & 0x1;
-      mask = sign_bit << 8;
-      extended = (simm9 ^ mask) - mask;
+      int extended = sign_or_zero_extend(simm9, 9, 1);
 
       address = STATE.registers[xn] + extended;
       STATE.registers[xn] = address;
@@ -514,9 +529,7 @@ void single_data_transfer(instruction instr) {
       int simm9 = (instr >> 12) & 0x1ff;
 
       // Sign extend to 64 bits
-      sign_bit = (simm9 >> 8) & 0x1;
-      mask = sign_bit << 8;
-      extended = (simm9 ^ mask) - mask;
+      int extended = sign_or_zero_extend(simm9, 9, 1);
 
       address = STATE.registers[xn];
       STATE.registers[xn] += extended;
@@ -534,13 +547,13 @@ void single_data_transfer(instruction instr) {
         reg result1 = (STATE.memory[address / 4] >> (mod * 8));
 
         // Zero extend to 64 bits the 8 bytes stored at (address + 3)
-        mask = 0 << 31;
+        //long int ext = sign_or_zero_extend(STATE.memory[(address + 3) / 4], 32, 0);
+        int mask = 0 << 31;
         long int ext = (STATE.memory[(address + 3) / 4] ^ mask) - mask;
 
         // Zero extend to 64 bits the least significant ((mod * 8) - 1) bytes stored at (address + 7)
-        mask = 0 << ((mod * 8) - 1);
-        long int ext1 = (STATE.memory[(address + 7) / 4] ^ mask) - mask;
-        
+        long int ext1 = sign_or_zero_extend(STATE.memory[(address + 7) / 4], (mod * 8), 0);
+
         // All 8 bytes stored at (address + 3) are to be stored in rt after the lowest (4 - mod) bytes
         reg result2 = (ext << ((4 - mod) * 8));
 
@@ -553,8 +566,7 @@ void single_data_transfer(instruction instr) {
       // so only two memory addresses to be accessed
       } else {
         // Zero extend all 8 bytes at next address to 64 bits
-        mask = 0 << 31;
-        long int ext = (STATE.memory[(address + 4) / 4] ^ mask) - mask;
+        long int ext = sign_or_zero_extend(STATE.memory[(address + 4) / 4], 32, 0);
 
         STATE.registers[rt] = STATE.memory[address / 4] | (ext << 32);
       }
@@ -668,37 +680,40 @@ void single_data_transfer(instruction instr) {
   }  
 }
 
+/**
+ * Given an instruction of the type "Branch", processes and executes the instruction.
+ *
+ * @param instr The "Branch" instruction to be executed
+ */
 void branch_instructions(instruction instr) {
   // Extract bits 31 to 26
   byte sf = (instr >> 26) & 0x3f;
   switch (sf) {
     // Unconditional
-    case 0x5:
+    case 0x5: {
       // Extract bits 25 to 0
       int simm26 = instr & 0x3ffffff;
 
       // Sign extend to 64 bits
-      bool s_b = (simm26 >> 25) & 0x1;
-      int m = s_b << 25;
-      int ext = (simm26 ^ m) - m;
+      int extended = sign_or_zero_extend(simm26, 26, 1);
 
-      STATE.pc = STATE.pc + ext * 4;
+      STATE.pc = STATE.pc + extended * 4;
       break;
+    }
     // Register
-    case 0x35:
+    case 0x35: {
       // Extract bits 9 to 5
       byte xn = (instr >> 5) & 0x1f;
       STATE.pc = STATE.registers[xn];
       break;
+    }
     // Conditional
-    case 0x15:
+    case 0x15: {
       // Extract bits 23 to 5
       int simm19 = (instr >> 5) & 0x7ffff;
 
       // Sign extend to 64 bits
-      bool sign_bit = (simm19 >> 18) & 0x1;
-      int mask = sign_bit << 18;
-      int extended = (simm19 ^ mask) - mask;
+      int extended = sign_or_zero_extend(simm19, 19, 1);
 
       // Extract bits 3 to 0
       byte cond = instr & 0xf;
@@ -740,14 +755,24 @@ void branch_instructions(instruction instr) {
       } else {
         STATE.pc += 4;
       }
+    }
   }
 }
 
+/**
+ * Given an instruction of the type "NOP", processes and executes the instruction.
+ *
+ * @param instr The "NOP" instruction to be executed
+ */
 void nop(instruction instr) {
   STATE.pc += 4;
 }
 
-// Writing the state of the emulator to file
+/**
+ * Writes the current state of the processor into a given file.
+ *
+ * @param filename The name of the file to write to.
+ */
 void write_to_file(char* filename) {
   FILE *fp;
 
@@ -785,7 +810,9 @@ void write_to_file(char* filename) {
   fclose(fp);
 }
 
-// Printing the output of the emulator
+/**
+ * Outputs the current state of the processor to stdout.
+ */
 void print_output(void) {
   // Print registers
   printf("Registers:\n");
@@ -815,7 +842,6 @@ void print_output(void) {
 int main(int argc, char **argv) {
 
   if (argc == 2 || argc == 3) {
-
     // Initialise the state of the memory
     initialise_memory();
 
