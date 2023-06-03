@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "structures.h"
+#include "utils.h"
 
 typedef void (*func_ptr)(operand*, int);
 
@@ -60,6 +60,6 @@ struct InstructionMapping instructionMappings[] = {
     {"br", BR, &get_types_br},
     {"str", STR, &get_types_str},
     {"ldr", LDR, &get_types_ldr},
-    {"nop", NOP, &get_types_nop},
+    {"nop", NOP, &get_types_null},
     {".int", DIR, &get_types_dir},
 };

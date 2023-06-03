@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "structures.h"
+#include "utils.h"
 
 typedef uint32_t binary;
 
 // Prototypes
 binary assemble_DP(token_line line);
-binary assemble_SPECIAL(token_line line);
+binary assemble_B(token_line line);
+binary assemble_SDT(token_line line);
+binary assemble_SP(token_line line);
 
 typedef binary (*func_ptr)(token_line);
 
@@ -42,12 +44,12 @@ struct AssembleMapping instructionMappings[] = {
     {MSUB, &assemble_DP},
     {MUL, &assemble_DP},
     {MNEG, &assemble_DP},
-    {B, &assemble_DP},
-    {BCOND, &assemble_DP},
-    {BR, &assemble_DP},
-    {STR, &assemble_DP},
-    {LDR, &assemble_DP},
-    {NOP, &assemble_SPECIAL},
-    {DIR, &assemble_SPECIAL},
-    {HALT, &assemble_SPECIAL}
+    {B, &assemble_B},
+    {BCOND, &assemble_B},
+    {BR, &assemble_B},
+    {STR, &assemble_SDT},
+    {LDR, &assemble_SDT},
+    {NOP, &assemble_SP},
+    {DIR, &assemble_SP},
+    {HALT, &assemble_SP}
 };

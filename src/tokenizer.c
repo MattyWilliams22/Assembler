@@ -191,7 +191,18 @@ void get_types_dir(operand *operands, int op_count) {
   operands[0].type = IMM;
 }
 
-void get_types_nop(operand *operands, int op_count);
+void get_types_null(operand *operands, int op_count);
+
+bool is_halt(opcode_name opcode, operand *operands, int op_count) {
+  if (opcode == AND && op_count == 3) {
+    if (strcmp(operands[0].word, "x0") == 0 
+    && strcmp(operands[1].word, "x0") == 0
+    && strcmp(operands[2].word, "x0") == 0) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // Converts a string into a token_line
 token_line process_line(char * line) {
@@ -239,14 +250,19 @@ token_line process_line(char * line) {
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
 
-  // Need to detect halt instruction!!!!!
-
   for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
     if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
       opcode = instructionMappings[i].opcode;
       get_types = instructionMappings[i].function;
       has_function = true;
       break;
+    }
+  }
+
+  if(opcode == AND) {
+    if(is_halt(opcode, words, word_count)) {
+      opcode == HALT;
+      get_types = &get_types_null;
     }
   }
 

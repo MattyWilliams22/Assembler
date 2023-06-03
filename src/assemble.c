@@ -143,7 +143,18 @@ binary assemble_DP(token_line line) {
   return result;
 }
 
-binary assemble_SPECIAL(token_line line) {
+// Branch Instruction Assembler
+binary assemble_B(token_line line) {
+  return NULL;
+}
+
+// Single Data Transfer Instruction Assembler
+binary assemble_SDT(token_line line) {
+    return NULL;
+}
+
+// Special Instruction Assembler
+binary assemble_SP(token_line line) {
   if (line.opcode == NOP) {
     return NOOP;
   } else if (line.opcode == DIR) {
