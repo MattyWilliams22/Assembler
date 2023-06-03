@@ -1,9 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "symbolTable.h"
 
 // Adding to Symbol Table
 void add_to_table(Symbol_Table *table, Key key, Value value) {
-  Node *new_node = malloc(sizeof(Node));
+  Node_t *new_node = malloc(sizeof(Node_t));
   new_node->key = key;
   new_node->value = value;
   new_node->next = NULL;
@@ -11,7 +13,7 @@ void add_to_table(Symbol_Table *table, Key key, Value value) {
   if (table->head == NULL) {
     table->head = new_node;
   } else {
-    Node *current = table->head;
+    Node_t *current = table->head;
     while (current->next != NULL) {
       current = current->next;
     }
@@ -21,8 +23,8 @@ void add_to_table(Symbol_Table *table, Key key, Value value) {
 
 // Removing from Symbol Table
 void remove_from_table(Symbol_Table *table, Key key) {
-  Node *current = table->head;
-  Node *previous = NULL;
+  Node_t *current = table->head;
+  Node_t *previous = NULL;
 
   while (current != NULL) {
     if (strcmp(current->key, key) == 0) {
@@ -41,7 +43,7 @@ void remove_from_table(Symbol_Table *table, Key key) {
 
 // Finding in Symbol Table
 Value find_in_table(Symbol_Table *table, Key key) {
-  Node *current = table->head;
+  Node_t *current = table->head;
   while (current != NULL) {
     if (strcmp(current->key, key) == 0) {
       return current->value;
@@ -51,10 +53,12 @@ Value find_in_table(Symbol_Table *table, Key key) {
   return -1;
 }
 
+#include <stdbool.h>
+
 // Freeing Symbol Table
 void free_table(Symbol_Table *table) {
-  Node *current = table->head;
-  Node *next = NULL;
+  Node_t *current = table->head;
+  Node_t *next = NULL;
   while (current != NULL) {
     next = current->next;
     free(current);
@@ -65,7 +69,7 @@ void free_table(Symbol_Table *table) {
 
 // Check existence of key in Symbol Table
 bool exists_in_table(Symbol_Table *table, Key key) {
-  Node *current = table->head;
+  Node_t *current = table->head;
   while (current != NULL) {
     if (strcmp(current->key, key) == 0) {
       return true;
