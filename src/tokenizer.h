@@ -1,64 +1,24 @@
 #include <stdio.h>
+#include "structures.h"
 
-typedef enum {
-  ADD,ADDS,SUB,SUBS,
-  CMP,CMN,
-  NEG,NEGS,
-  AND,ANDS,BIC,BICS,EOR,ORR,EON,ORN,
-  TST,
-  MOVK,MOVN,MOVZ,
-  MOV,
-  MVN,
-  MADD,MSUB,
-  MUL,MNEG,
-  B,BCOND,
-  BR,
-  STR,LDR,
-  LDRLIT,
-  NOP,
-  DIR,
-  HALT,
-  UNRECOGNISED_OPCODE
-} opcode_name;
-
-typedef enum {
-  REG,
-  // May need to differentiate between IMM and SIMM
-  IMM,
-  SHIFT,
-  ADDR,
-  LABEL,
-  UNRECOGNISED_OPERAND
-} operand_type;
-
-typedef struct {
-  operand_type type;
-  char *word;
-} operand;
-
-typedef struct {
-  opcode_name opcode;
-  operand *operands;
-  int operand_count;
-} token_line;
-
-typedef void* (*func_ptr)(operand*, int);
+typedef void (*func_ptr)(operand*, int);
 
 // Get types functions
-void *get_types_add(operand *operands, int op_count);
-void *get_types_cmp(operand *operands, int op_count);
-void *get_types_and(operand *operands, int op_count);
-void *get_types_tst(operand *operands, int op_count);
-void *get_types_movx(operand *operands, int op_count);
-void *get_types_mov(operand *operands, int op_count);
-void *get_types_mvn(operand *operands, int op_count);
-void *get_types_madd(operand *operands, int op_count);
-void *get_types_mul(operand *operands, int op_count);
-void *get_types_b(operand *operands, int op_count);
-void *get_types_br(operand *operands, int op_count);
-void *get_types_str(operand *operands, int op_count);
-void *get_types_ldr(operand *operands, int op_count);
-void *get_types_dir(operand *operands, int op_count);
+void get_types_add(operand *operands, int op_count);
+void get_types_cmp(operand *operands, int op_count);
+void get_types_and(operand *operands, int op_count);
+void get_types_tst(operand *operands, int op_count);
+void get_types_movx(operand *operands, int op_count);
+void get_types_mov(operand *operands, int op_count);
+void get_types_mvn(operand *operands, int op_count);
+void get_types_madd(operand *operands, int op_count);
+void get_types_mul(operand *operands, int op_count);
+void get_types_b(operand *operands, int op_count);
+void get_types_br(operand *operands, int op_count);
+void get_types_str(operand *operands, int op_count);
+void get_types_ldr(operand *operands, int op_count);
+void get_types_nop(operand *operands, int op_count);
+void get_types_dir(operand *operands, int op_count);
 
 struct InstructionMapping {
     const char* instruction;
@@ -98,6 +58,6 @@ struct InstructionMapping instructionMappings[] = {
     {"br", BR, &get_types_br},
     {"str", STR, &get_types_str},
     {"ldr", LDR, &get_types_ldr},
-    {"nop", NOP, NULL},
+    {"nop", NOP, &get_types_nop},
     {".int", DIR, &get_types_dir},
 };

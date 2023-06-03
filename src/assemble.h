@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include <stdint.h>
+#include "structures.h"
 
 typedef uint32_t binary;
 
