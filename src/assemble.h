@@ -50,23 +50,23 @@ typedef struct {
   int piece_count;
 } binary_line;
 
-typedef operand* (*func_ptr)(operand*, int);
+typedef void* (*func_ptr)(operand*, int);
 
 // Get types functions
-operand *get_types_add(operand *operands, int op_count);
-char *get_types_cmp(operand *operands, int op_count);
-char *get_types_and(operand *operands, int op_count);
-char *get_types_tst(operand *operands, int op_count);
-char *get_types_movx(operand *operands, int op_count);
-char *get_types_mov(operand *operands, int op_count);
-char *get_types_mvn(operand *operands, int op_count);
-char *get_types_madd(operand *operands, int op_count);
-char *get_types_mul(operand *operands, int op_count);
-char *get_types_b(operand *operands, int op_count);
-char *get_types_br(operand *operands, int op_count);
-char *get_types_str(operand *operands, int op_count);
-char *get_types_ldr(operand *operands, int op_count);
-char *get_types_dir(operand *operands, int op_count);
+void *get_types_add(operand *operands, int op_count);
+void *get_types_cmp(operand *operands, int op_count);
+void *get_types_and(operand *operands, int op_count);
+void *get_types_tst(operand *operands, int op_count);
+void *get_types_movx(operand *operands, int op_count);
+void *get_types_mov(operand *operands, int op_count);
+void *get_types_mvn(operand *operands, int op_count);
+void *get_types_madd(operand *operands, int op_count);
+void *get_types_mul(operand *operands, int op_count);
+void *get_types_b(operand *operands, int op_count);
+void *get_types_br(operand *operands, int op_count);
+void *get_types_str(operand *operands, int op_count);
+void *get_types_ldr(operand *operands, int op_count);
+void *get_types_dir(operand *operands, int op_count);
 
 struct InstructionMapping {
     const char* instruction;

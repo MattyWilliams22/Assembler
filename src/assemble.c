@@ -59,7 +59,7 @@ int count_lines(FILE *fp) {
 // They are grouped by operand pattern as seen in table 2
 
 
-operand *get_types_add(operand *operands, int op_count) {
+void *get_types_add(operand *operands, int op_count) {
   operands[0].type = REG;
   operands[1].type = REG;
   if (operands[2].word[0] == '#') {
@@ -81,7 +81,7 @@ operand *get_types_add(operand *operands, int op_count) {
   }
 }
 
-char *get_types_cmp(operand *operands, int op_count) {
+void *get_types_cmp(operand *operands, int op_count) {
   operands[0].type = REG;
   if (operands[1].word[0] == '#') {
     // <Rn>, #<imm>{, <lsl #(0|12)>}
@@ -104,7 +104,7 @@ char *get_types_cmp(operand *operands, int op_count) {
   }
 }
 
-char *get_types_and(operand *operands, int op_count) {
+void *get_types_and(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>, <shift> #<imm>
   operands[0].type = REG;
   operands[1].type = REG;
@@ -112,7 +112,7 @@ char *get_types_and(operand *operands, int op_count) {
   operands[3].type = IMM;
 }
 
-char *get_types_tst(operand *operands, int op_count) {
+void *get_types_tst(operand *operands, int op_count) {
   // <Rn>, <Rm>{, <shift> #<imm>}
   operands[0].type = REG;
   operands[1].type = REG;
@@ -124,7 +124,7 @@ char *get_types_tst(operand *operands, int op_count) {
   }
 }
 
-char *get_types_movx(operand *operands, int op_count) {
+void *get_types_movx(operand *operands, int op_count) {
   // <Rd>, #<imm>{, lsl #<imm>}
   operands[0].type = REG;
   operands[1].type = IMM;
@@ -136,13 +136,13 @@ char *get_types_movx(operand *operands, int op_count) {
   }
 }
 
-char *get_types_mov(operand *operands, int op_count) {
+void *get_types_mov(operand *operands, int op_count) {
   // <Rd>, <Rn>
   operands[0].type = REG;
   operands[1].type = REG;
 }
 
-char *get_types_mvn(operand *operands, int op_count) {
+void *get_types_mvn(operand *operands, int op_count) {
   // <Rd>, <Rm>{, <shift> #<imm>}
   operands[0].type = REG;
   operands[1].type = REG;
@@ -155,7 +155,7 @@ char *get_types_mvn(operand *operands, int op_count) {
 }
   
 
-char *get_types_madd(operand *operands, int op_count) {
+void *get_types_madd(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>, <Ra>
   operands[0].type = REG;
   operands[1].type = REG;
@@ -163,14 +163,14 @@ char *get_types_madd(operand *operands, int op_count) {
   operands[3].type = REG;
 }
 
-char *get_types_mul(operand *operands, int op_count) {
+void *get_types_mul(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>
   operands[0].type = REG;
   operands[1].type = REG;
   operands[2].type = REG;
 }
 
-char *get_types_b(operand *operands, int op_count) {
+void *get_types_b(operand *operands, int op_count) {
   // <literal>      (label or immediate address)
   if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
     // <address>
@@ -181,12 +181,12 @@ char *get_types_b(operand *operands, int op_count) {
   }
 }
 
-char *get_types_br(operand *operands, int op_count) {
+void *get_types_br(operand *operands, int op_count) {
   // <Xn>
   operands[0].type = REG;
 }
 
-char *get_types_str(operand *operands, int op_count) {
+void *get_types_str(operand *operands, int op_count) {
   // Need to deal with [] somehow!
 
   operands[0].type = REG;
@@ -214,7 +214,7 @@ char *get_types_str(operand *operands, int op_count) {
   }
 }
 
-char *get_types_ldr(operand *operands, int op_count) {
+void *get_types_ldr(operand *operands, int op_count) {
   // <Rt>, <literal>
   operands[0].type = REG;
   if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
@@ -226,7 +226,7 @@ char *get_types_ldr(operand *operands, int op_count) {
   }
 }
 
-char *get_types_dir(operand *operands, int op_count) {
+void *get_types_dir(operand *operands, int op_count) {
   // <simm>
   operands[0].type = IMM;
 }
@@ -303,12 +303,19 @@ token_line process_line(char * line) {
 }
 
 // Reads an assembly code file and processes each line into a token_line
-token_line *read_assembly(FILE *fp, int nlines) {
-  char * line = NULL;
+token_line* read_assembly(FILE* fp, int nlines) {
+  char* line = NULL;
   size_t len = 0;
   ssize_t read;
   int count = 0;
-  token_line token_lines[nlines];
+  token_line* token_lines = malloc(nlines * sizeof(token_line));
+
+  if (token_lines == NULL) {
+    // Handle memory allocation failure
+    perror("Memory allocation failed");
+    fclose(fp);
+    return NULL;
+  }
 
   while ((read = getline(&line, &len, fp)) != -1) {
     token_lines[count] = process_line(line);
@@ -319,6 +326,7 @@ token_line *read_assembly(FILE *fp, int nlines) {
   free(line);
   return token_lines;
 }
+
 
 // Writes an array of binary_lines to the file given by fp
 void write_to_binary_file(FILE *fp, binary_line *binary_lines, int nlines) {
