@@ -276,6 +276,9 @@ void data_processing_immediate(instruction instr) {
         result = (STATE.registers[rd] & ~(mask << (hw * 16))) | (imm16 << (hw * 16));
         break;
       }
+      default:
+        perror("Invalid Instruction Detected!\n");
+        exit(EXIT_FAILURE);
     }
   }
 
@@ -754,6 +757,9 @@ void branch_instructions(instruction instr) {
         STATE.pc += 4;
       }
     }
+    default:
+      perror("Invalid Instruction Detected!\n");
+      exit(EXIT_FAILURE);
   }
 }
 
