@@ -4,72 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
-
-typedef enum {
-  ADD,ADDS,SUB,SUBS,
-  CMP,CMN,
-  NEG,NEGS,
-  AND,ANDS,BIC,BICS,EOR,ORR,EON,ORN,
-  TST,
-  MOVK,MOVN,MOVZ,
-  MOV,
-  MVN,
-  MADD,MSUB,
-  MUL,MNEG,
-  B,BCOND,
-  BR,
-  STR,LDR,
-  LDRLIT,
-  NOP,
-  DIR,
-  HALT,
-  UNRECOGNISED
-} opcode_name;
-
-typedef enum {
-  REG,
-  // May need to differentiate between IMM and SIMM
-  IMM,
-  SHIFT,
-  ADDR,
-  LABEL,
-  UNRECOGNISED
-} operand_type;
-
-typedef struct {
-  operand_type type;
-  char *word;
-} operand;
-
-typedef struct {
-  opcode_name opcode;
-  operand *operands;
-  int operand_count;
-} token_line;
-
-typedef int binary;
-
-typedef struct {
-  binary *pieces;
-  int piece_count;
-} binary_line;
-
-// Aliases for types
-
-typedef char* Key;
-typedef uint32_t Value;
-
-// Linked List Node
-typedef struct {
-  Key key;
-  Value value;
-  struct Node *next;
-} Node;
-
-// Linked List
-typedef struct {
-  Node *head;
-} Symbol_Table;
+#include "assemble.h"
 
 // Adding to Symbol Table
 void add_to_table(Symbol_Table *table, Key key, Value value) {
@@ -466,7 +401,6 @@ token_line process_line(char * line) {
   }
 
   if (opcode == LDR && word_count != 2) {
-    opcode = STR;
     get_types = &get_types_str;
   }
 
