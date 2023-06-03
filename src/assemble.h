@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <stdio.h>
 
 typedef enum {
@@ -49,22 +48,6 @@ typedef struct {
   binary *pieces;
   int piece_count;
 } binary_line;
-
-// Aliases for types
-typedef char* Key;
-typedef uint32_t Value;
-
-// Linked List Node
-typedef struct {
-  Key key;
-  Value value;
-  struct Node *next;
-} Node;
-
-// Linked List
-typedef struct {
-  Node *head;
-} Symbol_Table;
 
 typedef operand* (*func_ptr)(operand*, int);
 

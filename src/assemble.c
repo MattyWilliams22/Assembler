@@ -5,82 +5,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include "assemble.h"
-
-// Adding to Symbol Table
-void add_to_table(Symbol_Table *table, Key key, Value value) {
-  Node *new_node = malloc(sizeof(Node));
-  new_node->key = key;
-  new_node->value = value;
-  new_node->next = NULL;
-
-  if (table->head == NULL) {
-    table->head = new_node;
-  } else {
-    Node *current = table->head;
-    while (current->next != NULL) {
-      current = current->next;
-    }
-    current->next = new_node;
-  }
-}
-
-// Removing from Symbol Table
-void remove_from_table(Symbol_Table *table, Key key) {
-  Node *current = table->head;
-  Node *previous = NULL;
-
-  while (current != NULL) {
-    if (strcmp(current->key, key) == 0) {
-      if (previous == NULL) {
-        table->head = current->next;
-      } else {
-        previous->next = current->next;
-      }
-      free(current);
-      return;
-    }
-    previous = current;
-    current = current->next;
-  }
-}
-
-// Finding in Symbol Table
-Value find_in_table(Symbol_Table *table, Key key) {
-  Node *current = table->head;
-  while (current != NULL) {
-    if (strcmp(current->key, key) == 0) {
-      return current->value;
-    }
-    current = current->next;
-  }
-  return -1;
-}
-
-// Freeing Symbol Table
-void free_table(Symbol_Table *table) {
-  Node *current = table->head;
-  Node *next = NULL;
-  while (current != NULL) {
-    next = current->next;
-    free(current);
-    current = next;
-  }
-  table->head = NULL;
-}
-
-// Check existence of key in Symbol Table
-bool exists_in_table(Symbol_Table *table, Key key) {
-  Node *current = table->head;
-  while (current != NULL) {
-    if (strcmp(current->key, key) == 0) {
-      return true;
-    }
-    current = current->next;
-  }
-  return false;
-}
-
-
+#include "symbolTable.h"
 
 // Applies the shift to the binary input
 binary do_SHIFT(operand shift, binary input) {
@@ -306,50 +231,6 @@ char *get_types_dir(operand *operands, int op_count) {
   operands[0].type = IMM;
 }
 
-typedef operand* (*func_ptr)(operand*, int);
-
-struct InstructionMapping {
-    const char* instruction;
-    opcode_name opcode;
-    func_ptr function;
-};
-
-struct InstructionMapping instructionMappings[] = {
-    {"add", ADD, &get_types_add},
-    {"adds", ADDS, &get_types_add},
-    {"sub", SUB, &get_types_add},
-    {"subs", SUBS, &get_types_add},
-    {"cmp", CMP, &get_types_cmp},
-    {"cmn", CMN, &get_types_cmp},
-    {"neg", NEG, &get_types_cmp},
-    {"negs", NEGS, &get_types_cmp},
-    {"and", AND, &get_types_and},
-    {"ands", ANDS, &get_types_and},
-    {"bic", BIC, &get_types_and},
-    {"bics", BICS, &get_types_and},
-    {"eor", EOR, &get_types_and},
-    {"orr", ORR, &get_types_and},
-    {"eon", EON, &get_types_and},
-    {"orn", ORN, &get_types_and},
-    {"tst", TST, &get_types_tst},
-    {"movk", MOVK, &get_types_movx},
-    {"movn", MOVN, &get_types_movx},
-    {"movz", MOVZ, &get_types_movx},
-    {"mov", MOV, &get_types_mov},
-    {"mvn", MVN, &get_types_mvn},
-    {"madd", MADD, &get_types_madd},
-    {"msub", MSUB, &get_types_madd},
-    {"mul", MUL, &get_types_mul},
-    {"mneg", MNEG, &get_types_mul},
-    {"b", B, &get_types_b},
-    {"b.", BCOND, &get_types_b},
-    {"br", BR, &get_types_br},
-    {"str", STR, &get_types_str},
-    {"ldr", LDR, &get_types_ldr},
-    {"nop", NOP, NULL},
-    {".int", DIR, &get_types_dir},
-};
-
 // Converts a string into a token_line
 token_line process_line(char * line) {
   // Process a line from the .s file
@@ -390,7 +271,7 @@ token_line process_line(char * line) {
   }
 
   func_ptr get_types = NULL;
-  opcode_name opcode = UNRECOGNISED;
+  opcode_name opcode = UNRECOGNISED_OPERAND;
 
   for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
     if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
