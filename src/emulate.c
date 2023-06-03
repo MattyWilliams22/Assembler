@@ -179,7 +179,7 @@ reg choose_access_mode(byte sf, reg operand) {
  * @param type_of_extension The type of extension to be perform. 0 if zero extension or 1 if sign extension
  * @return The operand either sign or zero extended
  */
-reg sign_or_zero_extend(int operand, byte size_in_bits, bool type_of_extension) {
+reg sign_or_zero_extend(uint32_t operand, byte size_in_bits, bool type_of_extension) {
   bool sign_bit;
 
   if (type_of_extension == 0) {
@@ -188,7 +188,7 @@ reg sign_or_zero_extend(int operand, byte size_in_bits, bool type_of_extension) 
     sign_bit = (operand >> (size_in_bits - 1)) & 0x1;
   }
   int mask = sign_bit << (size_in_bits - 1);
-  int extended = (operand ^ mask) - mask;
+  long int extended = (operand ^ mask) - mask;
 
   return extended;
 }
@@ -547,9 +547,7 @@ void single_data_transfer(instruction instr) {
         reg result1 = (STATE.memory[address / 4] >> (mod * 8));
 
         // Zero extend to 64 bits the 8 bytes stored at (address + 3)
-        //long int ext = sign_or_zero_extend(STATE.memory[(address + 3) / 4], 32, 0);
-        int mask = 0 << 31;
-        long int ext = (STATE.memory[(address + 3) / 4] ^ mask) - mask;
+        long int ext = sign_or_zero_extend(STATE.memory[(address + 3) / 4], 32, 0);
 
         // Zero extend to 64 bits the least significant ((mod * 8) - 1) bytes stored at (address + 7)
         long int ext1 = sign_or_zero_extend(STATE.memory[(address + 7) / 4], (mod * 8), 0);
