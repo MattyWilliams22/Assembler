@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 
 typedef enum {
@@ -42,7 +43,7 @@ typedef struct {
   int operand_count;
 } token_line;
 
-typedef int binary;
+typedef uint32_t binary;
 
 typedef struct {
   binary *pieces;

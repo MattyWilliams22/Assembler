@@ -94,7 +94,7 @@ char *get_types_cmp(operand *operands, int op_count) {
     }
   } else {
     // <Rn>, <Rm>{, <shift> #<imm>}
-    operands[1].type == REG;
+    operands[1].type = REG;
     if (op_count == 3) {
       // <Rn>, <Rm>, <shift> #<imm>
       operands[2].type = SHIFT;
@@ -236,7 +236,7 @@ token_line process_line(char * line) {
   // Process a line from the .s file
   const char s[] = " "; 
   const char d[] = ".";
-  char * instr_str = strktok(line, s);
+  char * instr_str = strtok(line, s);
   instr_str = strtok(instr_str, d);
   int string_count = 0;
   char *strings[10];
@@ -266,12 +266,12 @@ token_line process_line(char * line) {
   const char c[] = ",";
 
   for (char *p = strtok(sentence, c); p != NULL; p = strtok(NULL, c)) {
-    strcpy(words[word_count], p);
+    strcpy(&words[word_count], p);
     word_count++;
   }
 
   func_ptr get_types = NULL;
-  opcode_name opcode = UNRECOGNISED_OPERAND;
+  opcode_name opcode = UNRECOGNISED_OPCODE;
 
   for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
     if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
@@ -289,7 +289,7 @@ token_line process_line(char * line) {
   token_line current_line;
 
   for (int i = 0; i < word_count; i++) {
-    current_operands[i].word = words[i];
+    current_operands[i].word = &words[i];
   }
 
   if (get_types != NULL) {
