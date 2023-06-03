@@ -14,6 +14,7 @@ void get_types_mvn(operand *operands, int op_count);
 void get_types_madd(operand *operands, int op_count);
 void get_types_mul(operand *operands, int op_count);
 void get_types_b(operand *operands, int op_count);
+void get_types_bcond(operand *operands, int op_count);
 void get_types_br(operand *operands, int op_count);
 void get_types_str(operand *operands, int op_count);
 void get_types_ldr(operand *operands, int op_count);
@@ -54,7 +55,7 @@ struct InstructionMapping instructionMappings[] = {
     {"mul", MUL, &get_types_mul},
     {"mneg", MNEG, &get_types_mul},
     {"b", B, &get_types_b},
-    {"b.", BCOND, &get_types_b},
+    {"b.", BCOND, &get_types_bcond},
     {"br", BR, &get_types_br},
     {"str", STR, &get_types_str},
     {"ldr", LDR, &get_types_ldr},

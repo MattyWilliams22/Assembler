@@ -7,10 +7,14 @@
 #include "assemble.h"
 #include "symbolTable.h"
 #include "tokenizer.h"
+#define HALT 0x8a000000
 
 // Applies the shift to the binary input
 binary do_SHIFT(operand shift, binary input) {
-  
+  if (shift.type != SHIFT) {
+    return NULL;
+  }
+
 }
 
 
@@ -21,23 +25,70 @@ binary convert_OPCODE(opcode_name name) {
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
-  
+  if (op.type != REG) {
+    return NULL;
+  }
+
 }
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
   // Handle if IMM is shifted or not
-  
+  if (op.type != IMM) {
+    return NULL;
+  }
 }
 
 // Converts an address to its binary representation
 binary convert_ADDR(operand op) {
-  
+  if (op.type != ADDR) {
+    return NULL;
+  }
 }
 
 // Converts a label to its binary representation
 binary convert_LABEL(operand op) {
-  
+  if (op.type != LABEL) {
+    return NULL;
+  }
+}
+
+binary convert_COND(operand op) {
+  if (op.type != COND) {
+    return NULL;
+  }
+  switch (op.word[0]) {
+    case 'e':
+      // eq
+      return 0x0;
+    case 'n':
+      // ne
+      return 0x1;
+    case 'g':
+      // ge or gt
+      if (op.word[1] == 'e') {
+        // ge
+        return 0xa;
+      } else {
+        // gt
+        return 0xc;
+      }
+    case 'l':
+      // lt or le
+      if (op.word[1] == 'e') {
+        // le
+        return 0xd;
+      } else {
+        // lt
+        return 0xb;
+      }
+    case 'a':
+      // al
+      return 0xe;
+    default:
+      // error
+      return NULL;
+  }
 }
 
 // Converts an operand to its binary representation
@@ -79,6 +130,18 @@ binary assemble_DP(token_line line) {
   }
 
   return result;
+}
+
+binary assemble_SPECIAL(token_line line) {
+  if (line.opcode == NOP) {
+
+  } else if (line.opcode == DIR) {
+
+  } else if (line.opcode == HALT) {
+    return HALT;
+  } else {
+    return NULL;
+  }
 }
 
 // Counts the number of lines of text in the file given by fp

@@ -28,6 +28,7 @@ typedef enum {
   SHIFT,
   ADDR,
   LABEL,
+  COND,
   UNRECOGNISED_OPERAND
 } operand_type;
 

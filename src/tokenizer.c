@@ -129,6 +129,18 @@ void get_types_b(operand *operands, int op_count) {
   }
 }
 
+void get_types_bcond(operand *operands, int op_count) {
+  // <cond>, <literal>
+  operands[0].type = COND;
+  if (operands[1].word[0] == '0' && operands[1].word[1] == 'x') {
+    // <cond>, <address>
+    operands[1].type = ADDR;
+  } else {
+    // <cond>, <label>
+    operands[1].type = LABEL;
+  }
+}
+
 void get_types_br(operand *operands, int op_count) {
   // <Xn>
   operands[0].type = REG;
