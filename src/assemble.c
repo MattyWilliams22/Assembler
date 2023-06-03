@@ -26,6 +26,7 @@ binary convert_REG(operand op) {
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
+  // Handle if IMM is shifted or not
   
 }
 
@@ -42,6 +43,42 @@ binary convert_LABEL(operand op) {
 // Converts an operand to its binary representation
 binary convert_OPERAND(operand op) {
 
+}
+
+// Sets bits in given binary to the given value
+binary set_bits(binary input, int start, int end, binary value) {
+  binary mask = 0;
+  for (int i = start; i <= end; i++) {
+    mask = mask | (1 << i);
+  }
+  return (input & ~mask) | (value << start);
+}
+
+// Data Processing Instruction Assembler
+binary assemble_DP(token_line line) {
+  binary result = 0;
+
+  // Immediate
+  if (line.operands[2].type == IMM) {
+    // Set bits 4 to 0 as value of Rd
+    result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
+    // Set bits 28 to 26 as 100
+    result = set_bits(result, 26, 28, 0x4);
+    // Set bits 9 to 5 as value of Rn
+    result = set_bits(result, 5, 9, convert_REG(line.operands[1]));  
+    // Set bits 30 to 29 as value of opcode
+    result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
+    // Set bit 31 to register access mode
+    if (line.operands[0].word[0] == 'x') {
+      result = set_bits(result, 31, 31, 1);
+    } else {
+      result = set_bits(result, 31, 31, 0);
+    }
+    // If IMM value is greater than 2^12 - 1 then sh is 1
+
+  }
+
+  return result;
 }
 
 // Counts the number of lines of text in the file given by fp
