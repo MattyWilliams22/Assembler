@@ -25,6 +25,7 @@ struct InstructionMapping {
     const char* instruction;
     opcode_name opcode;
     func_ptr function;
+    
 };
 
 struct InstructionMapping instructionMappings[] = {

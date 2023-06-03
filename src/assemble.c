@@ -8,6 +8,7 @@
 #include "symbolTable.h"
 #include "tokenizer.h"
 #define HALT 0x8a000000
+#define NOOP 0xd503201f
 
 // Applies the shift to the binary input
 binary do_SHIFT(operand shift, binary input) {
@@ -33,9 +34,19 @@ binary convert_REG(operand op) {
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
-  // Handle if IMM is shifted or not
+  // Need to handle if IMM is signed or not
+
+
   if (op.type != IMM) {
     return NULL;
+  }
+
+  if (op.word[0] == '0' && op.word[1] == 'x') {
+    // hex
+    return (int)strtol(op.word[2], NULL, 16);
+  } else {
+    // decimal
+    return atoi(op.word);
   }
 }
 
@@ -134,14 +145,29 @@ binary assemble_DP(token_line line) {
 
 binary assemble_SPECIAL(token_line line) {
   if (line.opcode == NOP) {
-
+    return NOOP;
   } else if (line.opcode == DIR) {
-
+    int result;
+    // ???????????????????
+    return result;
   } else if (line.opcode == HALT) {
     return HALT;
   } else {
     return NULL;
   }
+}
+
+binary assemble_line(token_line line) {
+  bool has_function = false;
+  func_ptr assemble_func;
+  for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
+    if (line.opcode == instructionMappings[i].opcode) {
+      assemble_func = instructionMappings[i].function;
+      has_function = true;
+      break;
+    }
+  }
+  return assemble_func(line);
 }
 
 // Counts the number of lines of text in the file given by fp
@@ -156,15 +182,15 @@ int count_lines(FILE *fp) {
   return count;
 }
 
-// Writes an array of binary_lines to the file given by fp
-void write_to_binary_file(FILE *fp, binary_line *binary_lines, int nlines) {
+// Writes an array of binary to the file given by fp
+void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
   // Check if the file pointer is valid
   if (fp == NULL) {
     printf("Invalid file pointer\n");
     return;
   }
 
-  // Check if the binary_lines pointer is valid
+  // Check if the binary pointer is valid
   if (binary_lines == NULL) {
     printf("Invalid binary_lines pointer\n");
     return;
@@ -172,7 +198,7 @@ void write_to_binary_file(FILE *fp, binary_line *binary_lines, int nlines) {
 
   // Write the binary data to the file
   for (int i = 0; i < nlines; i++) {
-    fwrite(binary_lines[i].pieces, sizeof(binary), binary_lines[i].piece_count, fp);
+    fwrite(binary_lines[i], sizeof(binary), 1, fp);
   }
 }
 
@@ -193,13 +219,7 @@ int main(int argc, char **argv) {
   // Convert token_lines to binary_lines
   binary *binary_lines[nlines];
   for (int i = 0; i < nlines; i++) {
-    token_line current_t_line = token_lines[i];
-    binary_line current_b_line;
-    current_b_line.pieces[0] = convert_OPCODE(current_t_line.opcode);
-    current_b_line.piece_count = 1;
-    for (int j = 0; j < current_t_line.operand_count; j++) {
-      current_b_line.pieces[current_b_line.piece_count] = convert_OPERAND(current_t_line.operands[j]);
-    }
+    binary_lines[i] = assemble_line(token_lines[i]);
   }
 
 

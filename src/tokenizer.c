@@ -227,6 +227,9 @@ token_line process_line(char * line) {
   char *words;
   const char c[] = ",";
 
+
+  // Need to assemble words differently for STR and LDR due to []'s
+
   for (char *p = strtok(sentence, c); p != NULL; p = strtok(NULL, c)) {
     strcpy(&words[word_count], p);
     word_count++;
@@ -235,6 +238,8 @@ token_line process_line(char * line) {
   func_ptr get_types;
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
+
+  // Need to detect halt instruction!!!!!
 
   for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
     if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
