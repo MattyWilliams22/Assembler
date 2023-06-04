@@ -115,6 +115,13 @@ binary set_bits(binary input, int start, int end, binary value) {
 binary assemble_DP(token_line line) {
   binary result = 0;
 
+  // Set bit 31 to register access mode
+  if (line.operands[0].word[0] == 'x') {
+    result = set_bits(result, 31, 31, 1);
+  } else {
+    result = set_bits(result, 31, 31, 0);
+  }
+
   // Immediate
   if (line.operands[2].type == IMM) {
     // Set bits 4 to 0 as value of Rd
@@ -125,13 +132,49 @@ binary assemble_DP(token_line line) {
     result = set_bits(result, 5, 9, convert_REG(line.operands[1]));  
     // Set bits 30 to 29 as value of opcode
     result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
-    // Set bit 31 to register access mode
-    if (line.operands[0].word[0] == 'x') {
-      result = set_bits(result, 31, 31, 1);
-    } else {
-      result = set_bits(result, 31, 31, 0);
-    }
     // If IMM value is greater than 2^12 - 1 then sh is 1
+    if (convert_IMM(line.operands[2]) >= 0xfff) {
+      result = set_bits(result, 22, 22, 1);
+      // IMM has been left shifted 12 so we must right shift
+      result = set_bits(result, 10, 21, convert_IMM(line.operands[2]) >> 12);
+    } else {
+      result = set_bits(result, 22, 22, 0);
+      result = set_bits(result, 10, 21, convert_IMM(line.operands[2]));
+    }
+    // Set opi
+    if (line.opcode == ADD || line.opcode == SUB || line.opcode == ADDS || line.opcode == SUBS) {
+      result = set_bits(result, 23, 25, 0x2);
+    }
+    if (line.opcode == MOVN || line.opcode == MOVZ || line.opcode == MOVK) {
+      result = set_bits(result, 23, 25, 0x5);
+    }
+  } else {
+    // Data Processing Register
+
+    // Set bits 4 to 0 as value of Rd
+    result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
+    // Set bits 9 to 5 as value of Rn
+    result = set_bits(result, 5, 9, convert_REG(line.operands[1]));
+    // Set tbis 20 to 16 as value of Rm
+    result = set_bits(result, 16, 20, convert_REG(line.operands[2]));
+    // Set bits 30 to 29 as value of opcode
+    result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
+    // Set bits 27 to 25 as 101
+    result = set_bits(result, 25, 27, 0x5);
+    // Set M and opr
+    if (line.opcode == ADD || line.opcode == SUB || line.opcode == ADDS || line.opcode == SUBS) {
+      // Set bit 28 as 0
+      result = set_bits(result, 28, 28, 0);
+      // Set bit 24 as 1
+      result = set_bits(result, 24, 24, 1);
+      // Set bit 21 as 0
+      result = set_bits(result, 21, 21, 0);
+      // Set bits 23 to 22 as shift amount
+
+      
+    }
+    
+
 
   }
 
