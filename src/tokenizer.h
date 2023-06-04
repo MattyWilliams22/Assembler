@@ -20,6 +20,7 @@ void get_types_str(operand *operands, int op_count);
 void get_types_ldr(operand *operands, int op_count);
 void get_types_nop(operand *operands, int op_count);
 void get_types_dir(operand *operands, int op_count);
+void get_types_null(operand *operands, int op_count);
 
 struct InstructionMapping {
     const char* instruction;

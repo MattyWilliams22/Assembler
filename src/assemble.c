@@ -7,6 +7,7 @@
 #include "assemble.h"
 #include "symbolTable.h"
 #include "tokenizer.h"
+
 #define HALT 0x8a000000
 #define NOOP 0xd503201f
 

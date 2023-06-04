@@ -15,7 +15,7 @@ typedef binary (*func_ptr)(token_line);
 struct AssembleMapping {
   opcode_name opcode;
   func_ptr function;
-}
+};
 
 struct AssembleMapping instructionMappings[] = {
     {ADD, &assemble_DP},
