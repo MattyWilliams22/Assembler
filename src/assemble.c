@@ -8,16 +8,36 @@
 #define NOOP 0xd503201f
 
 // Applies the shift to the binary input
-binary do_SHIFT(operand shift, binary input) {
+binary convert_SHIFT(operand shift) {
   if (shift.type != SHIFT) {
     return NULL;
+  }
+  if (shift.word[0] == 'l') {
+    // lsl or lsr
+    if (shift.word[2] == 'l') {
+      // lsl
+      return 0x0;
+    } else {
+      // lsr
+      return 0x1;
+    }
+  } else if (shift.word[0] == 'a') {
+    // asr
+    return 0x2;
+  } else {
+    // ror
+    return 0x3;
   }
 }
 
 
 // Converts an opcode to its binary representation
 binary convert_OPCODE(opcode_name name) {
-
+  for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
+    if (line.opcode == assembleMappings[i].opcode) {
+      return assembleMappings[i].opc;
+    }
+  }
 }
 
 // Converts a register to its binary representation
@@ -25,23 +45,23 @@ binary convert_REG(operand op) {
   if (op.type != REG) {
     return NULL;
   }
+  return atoi(&op.word[1]);
 }
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
   // Need to handle if IMM is signed or not
 
-
   if (op.type != IMM) {
     return NULL;
   }
 
-  if (op.word[0] == '0' && op.word[1] == 'x') {
+  if (op.word[1] == '0' && op.word[2] == 'x') {
     // hex
-    return (int)strtol(&op.word[2], NULL, 16);
+    return (int)strtol(&op.word[3], NULL, 16);
   } else {
     // decimal
-    return atoi(op.word);
+    return atoi(&op.word[1]);
   }
 }
 
@@ -183,7 +203,24 @@ binary assemble_DP(token_line line) {
 
 // Branch Instruction Assembler
 binary assemble_B(token_line line) {
-  return NULL;
+  binary result = 0;
+  if (line.opcode == B) {
+    // Unconditional
+    result = set_bits(result, 26, 31, 0x5);
+    result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
+  } else if (line.opcode == BR) {
+    // Register
+    result = set_bits(result, 10, 31, 0x3587c0);
+    result = set_bits(result, 5, 9, convert_REG(line.operands[0]));
+    result = set_bits(result, 0, 4, 0);
+  } else if (line.opcode == BCOND) {
+    // Conditional
+    result = set_bits(result, 24, 31, 0x54);
+    result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
+    result = set_bits(result, 0, 4, convert_COND(line.operands[0]));
+  } else {
+    return NULL;
+  }
 }
 
 // Single Data Transfer Instruction Assembler
