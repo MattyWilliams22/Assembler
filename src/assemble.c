@@ -329,9 +329,7 @@ binary assemble_SP(token_line line) {
   if (line.opcode == NOP) {
     return NOOP;
   } else if (line.opcode == DIR) {
-    int result;
-    // ???????????????????
-    return result;
+    return convert_IMM(line.operands[0]);
   } else if (line.opcode == HALT) {
     return HALT;
   } else {

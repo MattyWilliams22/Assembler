@@ -119,13 +119,13 @@ void get_types_mul(operand *operands, int op_count) {
 }
 
 void get_types_b(operand *operands, int op_count) {
-  // <literal>      (label or imm)
+  // <literal>      (label_OPERAND or imm)
   if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
     // <imm>
     operands[0].type = IMM;
   } else {
     // <label>
-    operands[0].type = LABEL;
+    operands[0].type = LABEL_OPERAND;
   }
 }
 
@@ -137,7 +137,7 @@ void get_types_bcond(operand *operands, int op_count) {
     operands[1].type = IMM;
   } else {
     // <cond>, <label>
-    operands[1].type = LABEL;
+    operands[1].type = LABEL_OPERAND;
   }
 }
 
@@ -183,7 +183,7 @@ void get_types_ldr(operand *operands, int op_count) {
     operands[1].type = IMM;
   } else {
     // <Rt>, <label>
-    operands[1].type = LABEL;
+    operands[1].type = LABEL_OPERAND;
   }
 }
 
@@ -207,7 +207,6 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 
 // Converts a string into a token_line
 token_line process_line(char * line) {
-  // Process a line from the .s file
   const char s[] = " "; 
   const char d[] = ".";
   char * instr_str = strtok(line, s);
@@ -254,6 +253,12 @@ token_line process_line(char * line) {
       get_types = instructionMappings[i].function;
       has_function = true;
       break;
+    }
+  }
+  if (opcode == UNRECOGNISED_OPCODE) {
+    int length = strlen(instr_str);
+    if (instr_str[length - 1] == ':') {
+      opcode == LABEL_OPCODE;
     }
   }
 

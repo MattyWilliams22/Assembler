@@ -21,6 +21,7 @@ typedef enum {
   NOP,
   DIR,
   HALT,
+  LABEL_OPCODE,
   UNRECOGNISED_OPCODE
 } opcode_name;
 
@@ -29,7 +30,7 @@ typedef enum {
   // May need to differentiate between IMM and SIMM
   IMM,
   SHIFT,
-  LABEL,
+  LABEL_OPERAND,
   COND,
   UNRECOGNISED_OPERAND
 } operand_type;
