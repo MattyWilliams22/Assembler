@@ -166,9 +166,9 @@ binary assemble_SP(token_line line) {
 binary assemble_line(token_line line) {
   bool has_function = false;
   func_ptr assemble_func;
-  for (int i = 0; i < sizeof(instructionMapping) / sizeof(instructionMapping[0]); i++) {
-    if (line.opcode == instructionMapping[i].opcode) {
-      assemble_func = instructionMapping[i].function;
+  for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
+    if (line.opcode == assembleMappings[i].opcode) {
+      assemble_func = assembleMappings[i].function;
       has_function = true;
       break;
     }

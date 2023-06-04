@@ -2,7 +2,7 @@
 #define ASSEMBLE_H
 
 #include <stdint.h>
-#include "utils.h"
+#include "assembleutils.h"
 
 typedef uint32_t binary;
 
@@ -19,7 +19,7 @@ struct AssembleMapping {
   func_ptr function;
 };
 
-struct AssembleMapping instructionMapping[] = {
+struct AssembleMapping assembleMappings[] = {
     {ADD, &assemble_DP},
     {ADDS, &assemble_DP},
     {SUB, &assemble_DP},

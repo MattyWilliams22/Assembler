@@ -1,7 +1,7 @@
 #ifndef TOKENIZER_H
 #define TOKENIZER_H
 
-#include "utils.h"
+#include "assembleutils.h"
 
 typedef void (*func_ptr_type)(operand*, int);
 
