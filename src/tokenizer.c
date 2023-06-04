@@ -119,10 +119,10 @@ void get_types_mul(operand *operands, int op_count) {
 }
 
 void get_types_b(operand *operands, int op_count) {
-  // <literal>      (label or immediate address)
+  // <literal>      (label or imm)
   if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
-    // <address>
-    operands[0].type = ADDR;
+    // <imm>
+    operands[0].type = IMM;
   } else {
     // <label>
     operands[0].type = LABEL;
@@ -133,8 +133,8 @@ void get_types_bcond(operand *operands, int op_count) {
   // <cond>, <literal>
   operands[0].type = COND;
   if (operands[1].word[0] == '0' && operands[1].word[1] == 'x') {
-    // <cond>, <address>
-    operands[1].type = ADDR;
+    // <cond>, <imm>
+    operands[1].type = IMM;
   } else {
     // <cond>, <label>
     operands[1].type = LABEL;
@@ -179,8 +179,8 @@ void get_types_ldr(operand *operands, int op_count) {
   // <Rt>, <literal>
   operands[0].type = REG;
   if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
-    // <Rt>, <address>
-    operands[1].type = ADDR;
+    // <Rt>, <imm>
+    operands[1].type = IMM;
   } else {
     // <Rt>, <label>
     operands[1].type = LABEL;

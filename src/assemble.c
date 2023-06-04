@@ -56,19 +56,16 @@ binary convert_IMM(operand op) {
     return NULL;
   }
 
-  if (op.word[1] == '0' && op.word[2] == 'x') {
+  if (op.word[0] == '#') {
+    op.word = &op.word[1];
+  }
+
+  if (op.word[0] == '0' && op.word[1] == 'x') {
     // hex
-    return (int)strtol(&op.word[3], NULL, 16);
+    return (int)strtol(&op.word[2], NULL, 16);
   } else {
     // decimal
-    return atoi(&op.word[1]);
-  }
-}
-
-// Converts an address to its binary representation
-binary convert_ADDR(operand op) {
-  if (op.type != ADDR) {
-    return NULL;
+    return atoi(op.word);
   }
 }
 
@@ -222,7 +219,11 @@ binary assemble_B(token_line line) {
   if (line.opcode == B) {
     // Unconditional
     result = set_bits(result, 26, 31, 0x5);
-    result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
+    if (line.operands[0].type == IMM) {
+      result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
+    } else {
+      result = set_bits(result, 0, 25, convert_LABEL(line.operands[0]));
+    }
   } else if (line.opcode == BR) {
     // Register
     result = set_bits(result, 10, 31, 0x3587c0);
@@ -231,8 +232,12 @@ binary assemble_B(token_line line) {
   } else if (line.opcode == BCOND) {
     // Conditional
     result = set_bits(result, 24, 31, 0x54);
-    result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
     result = set_bits(result, 0, 4, convert_COND(line.operands[0]));
+    if (line.operands[0].type == IMM) {
+      result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
+    } else {
+      result = set_bits(result, 5, 23, convert_LABEL(line.operands[1]));
+    }
   } else {
     return NULL;
   }

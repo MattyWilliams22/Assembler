@@ -29,7 +29,6 @@ typedef enum {
   // May need to differentiate between IMM and SIMM
   IMM,
   SHIFT,
-  ADDR,
   LABEL,
   COND,
   UNRECOGNISED_OPERAND
