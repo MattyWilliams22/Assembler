@@ -756,6 +756,8 @@ void branch_instructions(instruction instr) {
       } else {
         STATE.pc += 4;
       }
+
+      break;
     }
     default:
       perror("Invalid Instruction Detected!\n");
