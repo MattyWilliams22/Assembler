@@ -1,4 +1,6 @@
-#include <stdio.h>
+#ifndef ASSEMBLE_H
+#define ASSEMBLE_H
+
 #include <stdint.h>
 #include "utils.h"
 
@@ -17,7 +19,7 @@ struct AssembleMapping {
   func_ptr function;
 };
 
-struct AssembleMapping instructionMappings[] = {
+struct AssembleMapping instructionMapping[] = {
     {ADD, &assemble_DP},
     {ADDS, &assemble_DP},
     {SUB, &assemble_DP},
@@ -53,3 +55,5 @@ struct AssembleMapping instructionMappings[] = {
     {DIR, &assemble_SP},
     {HALT, &assemble_SP}
 };
+
+#endif

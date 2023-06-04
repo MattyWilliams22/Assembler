@@ -1,7 +1,9 @@
-#include <stdio.h>
+#ifndef TOKENIZER_H
+#define TOKENIZER_H
+
 #include "utils.h"
 
-typedef void (*func_ptr)(operand*, int);
+typedef void (*func_ptr_type)(operand*, int);
 
 // Get types functions
 void get_types_add(operand *operands, int op_count);
@@ -22,10 +24,12 @@ void get_types_nop(operand *operands, int op_count);
 void get_types_dir(operand *operands, int op_count);
 void get_types_null(operand *operands, int op_count);
 
+token_line* read_assembly(FILE* fp, int nlines);
+
 struct InstructionMapping {
     const char* instruction;
     opcode_name opcode;
-    func_ptr function;
+    func_ptr_type function;
     
 };
 
@@ -64,3 +68,5 @@ struct InstructionMapping instructionMappings[] = {
     {"nop", NOP, &get_types_null},
     {".int", DIR, &get_types_dir},
 };
+
+#endif

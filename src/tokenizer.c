@@ -246,7 +246,7 @@ token_line process_line(char * line) {
     word_count++;
   }
 
-  func_ptr get_types;
+  func_ptr_type get_types;
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
 
@@ -261,7 +261,7 @@ token_line process_line(char * line) {
 
   if(opcode == AND) {
     if(is_halt(opcode, words, word_count)) {
-      opcode == HALT;
+      opcode = HALT;
       get_types = &get_types_null;
     }
   }
@@ -292,7 +292,7 @@ token_line process_line(char * line) {
 token_line* read_assembly(FILE* fp, int nlines) {
   char* line = NULL;
   size_t len = 0;
-  ssize_t read;
+  int read;
   int count = 0;
   token_line* token_lines = malloc(nlines * sizeof(token_line));
 

@@ -1,3 +1,6 @@
+#ifndef SYMBOLTABLE_H
+#define SYMBOLTABLE_H
+
 #include <stdint.h>
 
 // Aliases for types
@@ -15,3 +18,5 @@ typedef struct Node{
 typedef struct {
   Node_t *head;
 } Symbol_Table;
+
+#endif

@@ -1,9 +1,5 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
 #include <stdbool.h>
-#include <sys/types.h>
+#include <stdlib.h>
 #include "assemble.h"
 #include "symbolTable.h"
 #include "tokenizer.h"
@@ -16,7 +12,6 @@ binary do_SHIFT(operand shift, binary input) {
   if (shift.type != SHIFT) {
     return NULL;
   }
-
 }
 
 
@@ -30,7 +25,6 @@ binary convert_REG(operand op) {
   if (op.type != REG) {
     return NULL;
   }
-
 }
 
 // Converts an immediate value to its binary representation
@@ -44,7 +38,7 @@ binary convert_IMM(operand op) {
 
   if (op.word[0] == '0' && op.word[1] == 'x') {
     // hex
-    return (int)strtol(op.word[2], NULL, 16);
+    return (int)strtol(&op.word[2], NULL, 16);
   } else {
     // decimal
     return atoi(op.word);
@@ -172,9 +166,9 @@ binary assemble_SP(token_line line) {
 binary assemble_line(token_line line) {
   bool has_function = false;
   func_ptr assemble_func;
-  for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
-    if (line.opcode == instructionMappings[i].opcode) {
-      assemble_func = instructionMappings[i].function;
+  for (int i = 0; i < sizeof(instructionMapping) / sizeof(instructionMapping[0]); i++) {
+    if (line.opcode == instructionMapping[i].opcode) {
+      assemble_func = instructionMapping[i].function;
       has_function = true;
       break;
     }
@@ -210,7 +204,7 @@ void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
 
   // Write the binary data to the file
   for (int i = 0; i < nlines; i++) {
-    fwrite(binary_lines[i], sizeof(binary), 1, fp);
+    fwrite(&binary_lines[i], sizeof(binary), 1, fp);
   }
 }
 
@@ -226,12 +220,12 @@ int main(int argc, char **argv) {
   int nlines = count_lines(input);
 
   // Convert lines of file to an array of token_lines
-  token_line *token_lines = read_assembly(input, nlines);
+  token_line* token_lines = read_assembly(input, nlines);
 
   // Convert token_lines to binary_lines
   binary *binary_lines[nlines];
   for (int i = 0; i < nlines; i++) {
-    binary_lines[i] = assemble_line(token_lines[i]);
+    *binary_lines[i] = assemble_line(token_lines[i]);
   }
 
 
