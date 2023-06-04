@@ -117,9 +117,24 @@ binary convert_COND(operand op) {
   }
 }
 
-// Converts an operand to its binary representation
-binary convert_OPERAND(operand op) {
-
+binary convert_ADDR_MODE(operand op, addressing_mode mode) {
+  int result = 0;
+  if (mode == REG_OFF) {
+    result = set_bits(result, 11, 11, 1);
+    result = set_bits(result, 6, 10, convert_REG(op));
+    result = set_bits(result, 0, 5, 0x1a);
+  } else if (mode == UNSIGNED_OFF) {
+    result = convert_IMM(op);
+  } else {
+    result = set_bits(result, 11, 11, 0);
+    result = set_bits(result, 2, 10, convert_IMM(op));
+    if (mode == PRE_IND) {
+      result = set_bits(result, 0, 1, 0x3);
+    } else {
+      result = set_bits(result, 0, 1, 1);
+    }
+  }
+  return result;
 }
 
 // Sets bits in given binary to the given value
@@ -223,6 +238,42 @@ binary assemble_B(token_line line) {
   }
 }
 
+typedef enum {
+  REG_OFF,
+  PRE_IND,
+  POST_IND,
+  UNSIGNED_OFF
+} addressing_mode;
+
+addressing_mode get_addressing_mode(token_line line) {
+  operands[1].word = &operands[1].word[1];
+  int length1 = strlen(operands[2].word);
+  if (operands[2].word[length1 - 1] == '!') {
+    // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
+    operands[2].word[length1 - 3] = '\0';
+    return PRE_IND;
+  } else if (operands[2].word[length1] != ']') {
+    // <Rt>, [<Xn>], #<simm>                     (Post-index)
+    operands[2].word[length1 - 2] = '\0';
+    return POST_IND;
+  } else if (operands[2].word[0] == '#') {
+    // <Rt>, [<Xn|SP>, #<imm>]                   (Unsigned Offset)
+    operands[2].word[length1 - 2] = '\0';
+    return UNSIGNED_OFF;
+  } else {
+    // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
+    if (op_count == 4) {
+    // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
+    int length2 = strlen(operands[3].word);
+    operands[3].word[length2 - 2] = '\0';
+    } else {
+    // <Rt>, [<Xn>, <Rm>]
+    operands[2].word[length1 - 2] = '\0';
+    }
+    return REG_OFF;
+  }
+}
+
 // Single Data Transfer Instruction Assembler
 binary assemble_SDT(token_line line) {
   binary result = 0;
@@ -251,9 +302,9 @@ binary assemble_SDT(token_line line) {
     }
 
     // U
+    addressing_mode mode = get_addressing_mode(line);
     int len = strlen(line.operands[2].word);
-    if (line.operands[2].word[0] == '#' && line.operands[2].word[len] == ']') {
-      // Unsigned Offset
+    if (mode == UNSIGNED_OFF) {
       result = set_bits(result, 24, 24, 1);
     } else {
       result = set_bits(result, 24, 24, 0);
@@ -262,10 +313,8 @@ binary assemble_SDT(token_line line) {
     result = set_bits(result, 31, 31, 1);
     result = set_bits(result, 25, 29, 0x1c);
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
-
-    // Need to remove []'s first
     result = set_bits(result, 5, 9, convert_REG(line.operands[1]));
-    result = set_bits(result, 10, 21, convert_ADDR(line.operands[2]));
+    result = set_bits(result, 10, 21, convert_ADDR_MODE(line.operands[2]));
   }
   return result;
 }

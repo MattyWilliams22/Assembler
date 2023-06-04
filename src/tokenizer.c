@@ -153,11 +153,11 @@ void get_types_str(operand *operands, int op_count) {
   operands[1].type = REG;
   
   int length = strlen(operands[2].word);
-  if (operands[2].word[length] == '!') {
+  if (operands[2].word[length - 1] == '!') {
     // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
     operands[2].type = IMM;
                     
-  } else if (operands[2].word[length] != ']') {
+  } else if (operands[2].word[length - 1] != ']') {
     // <Rt>, [<Xn>], #<simm>                     (Post-index)
     operands[2].type = IMM;
   } else if (operands[2].word[0] == '#') {
