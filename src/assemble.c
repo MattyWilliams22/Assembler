@@ -225,7 +225,49 @@ binary assemble_B(token_line line) {
 
 // Single Data Transfer Instruction Assembler
 binary assemble_SDT(token_line line) {
-    return NULL;
+  binary result = 0;
+
+  // Set bit 31 to register access mode
+  if (line.operands[0].word[0] == 'x') {
+    result = set_bits(result, 30, 30, 1);
+  } else {
+    result = set_bits(result, 30, 30, 0);
+  }
+
+  if (line.opcode == LDR && line.op_count == 2) {
+    // Load literal
+    result = set_bits(result, 31, 31, 0);
+    result = set_bits(result, 24, 29, 0x18);
+    result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
+    result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
+  } else {
+    // Single Data Transfer
+
+    // 0 L
+    if (line.opcode == LDR) {
+      result = set_bits(result, 22, 23, 1);
+    } else {
+      result = set_bits(result, 22, 23, 0);
+    }
+
+    // U
+    int len = strlen(line.operands[2].word);
+    if (line.operands[2].word[0] == '#' && line.operands[2].word[len] == ']') {
+      // Unsigned Offset
+      result = set_bits(result, 24, 24, 1);
+    } else {
+      result = set_bits(result, 24, 24, 0);
+    }
+
+    result = set_bits(result, 31, 31, 1);
+    result = set_bits(result, 25, 29, 0x1c);
+    result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
+
+    // Need to remove []'s first
+    result = set_bits(result, 5, 9, convert_REG(line.operands[1]));
+    result = set_bits(result, 10, 21, convert_ADDR(line.operands[2]));
+  }
+  return result;
 }
 
 // Special Instruction Assembler

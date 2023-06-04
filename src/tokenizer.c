@@ -155,7 +155,8 @@ void get_types_str(operand *operands, int op_count) {
   int length = strlen(operands[2].word);
   if (operands[2].word[length] == '!') {
     // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
-    operands[2].type = IMM;                
+    operands[2].type = IMM;
+                    
   } else if (operands[2].word[length] != ']') {
     // <Rt>, [<Xn>], #<simm>                     (Post-index)
     operands[2].type = IMM;
