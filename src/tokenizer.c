@@ -6,6 +6,41 @@
 // get_types_... functions get the types of every operand in the line
 // They are grouped by operand pattern as seen in table 2
 
+InstructionMapping instructionMappings[] = {
+    {"add", ADD, &get_types_add},
+    {"adds", ADDS, &get_types_add},
+    {"sub", SUB, &get_types_add},
+    {"subs", SUBS, &get_types_add},
+    {"cmp", CMP, &get_types_cmp},
+    {"cmn", CMN, &get_types_cmp},
+    {"neg", NEG, &get_types_cmp},
+    {"negs", NEGS, &get_types_cmp},
+    {"and", AND, &get_types_and},
+    {"ands", ANDS, &get_types_and},
+    {"bic", BIC, &get_types_and},
+    {"bics", BICS, &get_types_and},
+    {"eor", EOR, &get_types_and},
+    {"orr", ORR, &get_types_and},
+    {"eon", EON, &get_types_and},
+    {"orn", ORN, &get_types_and},
+    {"tst", TST, &get_types_tst},
+    {"movk", MOVK, &get_types_movx},
+    {"movn", MOVN, &get_types_movx},
+    {"movz", MOVZ, &get_types_movx},
+    {"mov", MOV, &get_types_mov},
+    {"mvn", MVN, &get_types_mvn},
+    {"madd", MADD, &get_types_madd},
+    {"msub", MSUB, &get_types_madd},
+    {"mul", MUL, &get_types_mul},
+    {"mneg", MNEG, &get_types_mul},
+    {"b", B, &get_types_b},
+    {"b.", BCOND, &get_types_bcond},
+    {"br", BR, &get_types_br},
+    {"str", STR, &get_types_str},
+    {"ldr", LDR, &get_types_ldr},
+    {"nop", NOP, &get_types_null},
+    {".int", DIR, &get_types_dir},
+};
 
 void get_types_add(operand *operands, int op_count) {
   operands[0].type = REG;
@@ -192,7 +227,9 @@ void get_types_dir(operand *operands, int op_count) {
   operands[0].type = IMM;
 }
 
-void get_types_null(operand *operands, int op_count);
+void get_types_null(operand *operands, int op_count) {
+  // Do nothing
+}
 
 bool is_halt(opcode_name opcode, operand *operands, int op_count) {
   if (opcode == AND && op_count == 3) {
@@ -247,7 +284,7 @@ token_line process_line(char * line) {
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
 
-  for (int i = 0; i < sizeof(instructionMappings); i++) {
+  for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
     if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
       opcode = instructionMappings[i].opcode;
       get_types = instructionMappings[i].function;

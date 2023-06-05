@@ -9,6 +9,24 @@
 #define HALT 0x8a000000
 #define NOOP 0xd503201f
 
+AssembleMapping assembleMappings[] = {
+    {ADD, &assemble_DP, 0x0},
+    {ADDS, &assemble_DP, 0x1},
+    {SUB, &assemble_DP, 0x2},
+    {SUBS, &assemble_DP, 0x3},
+    {AND, &assemble_DP, 0x0},
+    {ANDS, &assemble_DP, 0x3},
+    {BIC, &assemble_DP, 0x0},
+    {BICS, &assemble_DP, 0x3},
+    {EOR, &assemble_DP, 0x2},
+    {ORR, &assemble_DP, 0x1},
+    {EON, &assemble_DP, 0x2},
+    {ORN, &assemble_DP, 0x1},
+    {MOVK, &assemble_DP, 0x3},
+    {MOVN, &assemble_DP, 0x0},
+    {MOVZ, &assemble_DP, 0x2},
+};
+
 // Sets bits in given binary to the given value
 binary set_bits(binary input, int start, int end, binary value) {
   binary mask = 0;
@@ -45,7 +63,7 @@ binary convert_SHIFT(operand shift) {
 
 // Converts an opcode to its binary representation
 binary convert_OPCODE(opcode_name name) {
-  for (int i = 0; i < sizeof(assembleMappings); i++) {
+  for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
     if (name == assembleMappings[i].opcode) {
       return assembleMappings[i].opc;
     }
@@ -168,15 +186,9 @@ binary assemble_DP(token_line line) {
     result = set_bits(result, 5, 9, convert_REG(line.operands[1]));  
     // Set bits 30 to 29 as value of opcode
     result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
-    // If IMM value is greater than 2^12 - 1 then sh is 1
-    if (convert_IMM(line.operands[2]) >= 0xfff) {
-      result = set_bits(result, 22, 22, 1);
-      // IMM has been left shifted 12 so we must right shift
-      result = set_bits(result, 10, 21, convert_IMM(line.operands[2]) >> 12);
-    } else {
-      result = set_bits(result, 22, 22, 0);
-      result = set_bits(result, 10, 21, convert_IMM(line.operands[2]));
-    }
+    // Setting IMM and sh
+
+
     // Set opi
     if (line.opcode == ADD || line.opcode == SUB || line.opcode == ADDS || line.opcode == SUBS) {
       result = set_bits(result, 23, 25, 0x2);
@@ -339,7 +351,7 @@ binary assemble_SP(token_line line) {
 binary assemble_line(token_line line) {
   bool has_function = false;
   func_ptr assemble_func;
-  for (int i = 0; i < sizeof(assembleMappings); i++) {
+  for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
     if (line.opcode == assembleMappings[i].opcode) {
       assemble_func = assembleMappings[i].function;
       has_function = true;
@@ -396,9 +408,9 @@ int main(int argc, char **argv) {
   token_line* token_lines = read_assembly(input, nlines);
 
   // Convert token_lines to binary_lines
-  binary *binary_lines[nlines];
+  binary binary_lines[nlines];
   for (int i = 0; i < nlines; i++) {
-    *binary_lines[i] = assemble_line(token_lines[i]);
+    binary_lines[i] = assemble_line(token_lines[i]);
   }
 
 
