@@ -1,11 +1,23 @@
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include "assemble.h"
+#include "assembleutils.h"
 #include "symbolTable.h"
 #include "tokenizer.h"
 
 #define HALT 0x8a000000
 #define NOOP 0xd503201f
+
+// Sets bits in given binary to the given value
+binary set_bits(binary input, int start, int end, binary value) {
+  binary mask = 0;
+  for (int i = start; i <= end; i++) {
+    mask = mask | (1 << i);
+  }
+  return (input & ~mask) | (value << start);
+}
+
 
 // Applies the shift to the binary input
 binary convert_SHIFT(operand shift) {
@@ -33,12 +45,13 @@ binary convert_SHIFT(operand shift) {
 
 // Converts an opcode to its binary representation
 binary convert_OPCODE(opcode_name name) {
-  for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
-    if (line.opcode == assembleMappings[i].opcode) {
+  for (int i = 0; i < sizeof(assembleMappings); i++) {
+    if (name == assembleMappings[i].opcode) {
       return assembleMappings[i].opc;
     }
   }
-}
+};
+
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
@@ -71,7 +84,7 @@ binary convert_IMM(operand op) {
 
 // Converts a label to its binary representation
 binary convert_LABEL(operand op) {
-  if (op.type != LABEL) {
+  if (op.type != LABEL_OPERAND) {
     return NULL;
   }
 }
@@ -115,7 +128,7 @@ binary convert_COND(operand op) {
 }
 
 binary convert_ADDR_MODE(operand op, addressing_mode mode) {
-  int result = 0;
+  binary result = 0;
   if (mode == REG_OFF) {
     result = set_bits(result, 11, 11, 1);
     result = set_bits(result, 6, 10, convert_REG(op));
@@ -132,15 +145,6 @@ binary convert_ADDR_MODE(operand op, addressing_mode mode) {
     }
   }
   return result;
-}
-
-// Sets bits in given binary to the given value
-binary set_bits(binary input, int start, int end, binary value) {
-  binary mask = 0;
-  for (int i = start; i <= end; i++) {
-    mask = mask | (1 << i);
-  }
-  return (input & ~mask) | (value << start);
 }
 
 // Data Processing Instruction Assembler
@@ -243,37 +247,32 @@ binary assemble_B(token_line line) {
   }
 }
 
-typedef enum {
-  REG_OFF,
-  PRE_IND,
-  POST_IND,
-  UNSIGNED_OFF
-} addressing_mode;
+
 
 addressing_mode get_addressing_mode(token_line line) {
-  operands[1].word = &operands[1].word[1];
-  int length1 = strlen(operands[2].word);
-  if (operands[2].word[length1 - 1] == '!') {
+  line.operands[1].word = &line.operands[1].word[1];
+  int length1 = strlen(line.operands[2].word);
+  if (line.operands[2].word[length1 - 1] == '!') {
     // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
-    operands[2].word[length1 - 3] = '\0';
+    line.operands[2].word[length1 - 3] = '\0';
     return PRE_IND;
-  } else if (operands[2].word[length1] != ']') {
+  } else if (line.operands[2].word[length1] != ']') {
     // <Rt>, [<Xn>], #<simm>                     (Post-index)
-    operands[2].word[length1 - 2] = '\0';
+    line.operands[2].word[length1 - 2] = '\0';
     return POST_IND;
-  } else if (operands[2].word[0] == '#') {
+  } else if (line.operands[2].word[0] == '#') {
     // <Rt>, [<Xn|SP>, #<imm>]                   (Unsigned Offset)
-    operands[2].word[length1 - 2] = '\0';
+    line.operands[2].word[length1 - 2] = '\0';
     return UNSIGNED_OFF;
   } else {
     // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
-    if (op_count == 4) {
+    if (line.operand_count == 4) {
     // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
-    int length2 = strlen(operands[3].word);
-    operands[3].word[length2 - 2] = '\0';
+    int length2 = strlen(line.operands[3].word);
+    line.operands[3].word[length2 - 2] = '\0';
     } else {
     // <Rt>, [<Xn>, <Rm>]
-    operands[2].word[length1 - 2] = '\0';
+    line.operands[2].word[length1 - 2] = '\0';
     }
     return REG_OFF;
   }
@@ -290,7 +289,7 @@ binary assemble_SDT(token_line line) {
     result = set_bits(result, 30, 30, 0);
   }
 
-  if (line.opcode == LDR && line.op_count == 2) {
+  if (line.opcode == LDR && line.operand_count == 2) {
     // Load literal
     result = set_bits(result, 31, 31, 0);
     result = set_bits(result, 24, 29, 0x18);
@@ -319,7 +318,7 @@ binary assemble_SDT(token_line line) {
     result = set_bits(result, 25, 29, 0x1c);
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
     result = set_bits(result, 5, 9, convert_REG(line.operands[1]));
-    result = set_bits(result, 10, 21, convert_ADDR_MODE(line.operands[2]));
+    result = set_bits(result, 10, 21, convert_ADDR_MODE(line.operands[2], mode));
   }
   return result;
 }
@@ -340,7 +339,7 @@ binary assemble_SP(token_line line) {
 binary assemble_line(token_line line) {
   bool has_function = false;
   func_ptr assemble_func;
-  for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
+  for (int i = 0; i < sizeof(assembleMappings); i++) {
     if (line.opcode == assembleMappings[i].opcode) {
       assemble_func = assembleMappings[i].function;
       has_function = true;

@@ -25,10 +25,6 @@ struct AssembleMapping assembleMappings[] = {
     {ADDS, &assemble_DP, 0x1},
     {SUB, &assemble_DP, 0x2},
     {SUBS, &assemble_DP, 0x3},
-    {CMP, &assemble_DP, NULL},
-    {CMN, &assemble_DP, NULL},
-    {NEG, &assemble_DP, NULL},
-    {NEGS, &assemble_DP, NULL},
     {AND, &assemble_DP, 0x0},
     {ANDS, &assemble_DP, 0x3},
     {BIC, &assemble_DP, 0x0},
@@ -37,24 +33,16 @@ struct AssembleMapping assembleMappings[] = {
     {ORR, &assemble_DP, 0x1},
     {EON, &assemble_DP, 0x2},
     {ORN, &assemble_DP, 0x1},
-    {TST, &assemble_DP, NULL},
     {MOVK, &assemble_DP, 0x3},
     {MOVN, &assemble_DP, 0x0},
     {MOVZ, &assemble_DP, 0x2},
-    {MOV, &assemble_DP, NULL},
-    {MVN, &assemble_DP, NULL},
-    {MADD, &assemble_DP, NULL},
-    {MSUB, &assemble_DP, NULL},
-    {MUL, &assemble_DP, NULL},
-    {MNEG, &assemble_DP, NULL},
-    {B, &assemble_B, NULL},
-    {BCOND, &assemble_B, NULL},
-    {BR, &assemble_B, NULL},
-    {STR, &assemble_SDT, NULL},
-    {LDR, &assemble_SDT, NULL},
-    {NOP, &assemble_SP, NULL},
-    {DIR, &assemble_SP, NULL},
-    {HALT, &assemble_SP, NULL}
 };
+
+typedef enum {
+  REG_OFF,
+  PRE_IND,
+  POST_IND,
+  UNSIGNED_OFF
+} addressing_mode;
 
 #endif

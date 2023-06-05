@@ -247,7 +247,7 @@ token_line process_line(char * line) {
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
 
-  for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
+  for (int i = 0; i < sizeof(instructionMappings); i++) {
     if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
       opcode = instructionMappings[i].opcode;
       get_types = instructionMappings[i].function;
@@ -258,7 +258,7 @@ token_line process_line(char * line) {
   if (opcode == UNRECOGNISED_OPCODE) {
     int length = strlen(instr_str);
     if (instr_str[length - 1] == ':') {
-      opcode == LABEL_OPCODE;
+      opcode = LABEL_OPCODE;
     }
   }
 
