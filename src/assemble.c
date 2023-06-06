@@ -37,26 +37,40 @@ binary set_bits(binary input, int start, int end, binary value) {
 }
 
 // Applies the shift to the binary input
-binary convert_SHIFT(operand shift) {
-  if (shift.type != SHIFT) {
+binary convert_SHIFT(operand op) {
+  if (op.type != SHIFT) {
     return NULL;
   }
-  if (shift.word[0] == 'l') {
+  if (op.word[0] == 'l') {
     // lsl or lsr
-    if (shift.word[2] == 'l') {
+    if (op.word[2] == 'l') {
       // lsl
       return 0x0;
     } else {
       // lsr
       return 0x1;
     }
-  } else if (shift.word[0] == 'a') {
+  } else if (op.word[0] == 'a') {
     // asr
     return 0x2;
   } else {
     // ror
     return 0x3;
   }
+}
+
+// Gets the number of bits to shift by
+binary get_shift_amount(operand op) {
+  if (op.type != SHIFT) {
+    return NULL;
+  }
+  int length = strlen(op.word);
+  for (int i = 0; i < length; i++) {
+    if (op.word[i] == '#') {
+      op.word = &op.word[i];
+    }
+  }
+  return convert_IMM(op);
 }
 
 
@@ -177,27 +191,34 @@ binary assemble_DP(token_line line) {
   }
 
   // Immediate
-  if (line.operands[2].type == IMM) {
-    // Must add case for wide moves
-
-    
-    // Set bits 4 to 0 as value of Rd
-    result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
-    // Set bits 28 to 26 as 100
-    result = set_bits(result, 26, 28, 0x4);
-    // Set bits 9 to 5 as value of Rn
-    result = set_bits(result, 5, 9, convert_REG(line.operands[1]));  
+  if (line.operands[2].type != REG) {
     // Set bits 30 to 29 as value of opcode
     result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
-    // Setting IMM and sh
-
-
-    // Set opi
-    if (line.opcode == ADD || line.opcode == SUB || line.opcode == ADDS || line.opcode == SUBS) {
-      result = set_bits(result, 23, 25, 0x2);
-    }
-    if (line.opcode == MOVN || line.opcode == MOVZ || line.opcode == MOVK) {
+    // Set bits 28 to 26 as 100
+    result = set_bits(result, 26, 28, 0x4);
+    // Set bits 4 to 0 as value of Rd
+    result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
+    if (line.operands[1].type == IMM) {
+      // Set bits 20 to 5 as imm16
+      result = set_bits(result, 5, 20, convert_IMM(line.operands[1]));
+      // Set bits 22 to 21 as hw (shift left by hw * 16 bits)
+      if (line.operands[2].type == SHIFT) {
+        // Do I need to divide by 16? 
+        result = set_bits(result, 21, 22, get_shift_amount(line.operands[2]) / 16);
+      }
+      // Set bits 25 to 23 as opi
       result = set_bits(result, 23, 25, 0x5);
+    } else {
+      // Set bits 9 to 5 as value of Rn
+      result = set_bits(result, 5, 9, convert_REG(line.operands[1]));  
+      // Set bits 21 to 10 as imm12
+      result = set_bits(result, 10, 21, convert_IMM(line.operands[2]));
+      // Set bit 22 as sh
+      if (line.operands[3].type == SHIFT && get_shift_amount(line.operands[3]) == 0xc) {
+        result = set_bits(result, 22, 22, 1);
+      }
+      // Set bits 25 to 23 as opi
+      result = set_bits(result, 23, 25, 0x2);
     }
   } else {
     // Data Processing Register
@@ -212,20 +233,49 @@ binary assemble_DP(token_line line) {
     result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
     // Set bits 27 to 25 as 101
     result = set_bits(result, 25, 27, 0x5);
-    // Set M and opr
+
     if (line.opcode == ADD || line.opcode == SUB || line.opcode == ADDS || line.opcode == SUBS) {
+      // Arithmetic
+
       // Set bit 28 as 0
       result = set_bits(result, 28, 28, 0);
       // Set bit 24 as 1
       result = set_bits(result, 24, 24, 1);
+      // Set bits 23 to 22 as shift type
+      result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
       // Set bit 21 as 0
       result = set_bits(result, 21, 21, 0);
-      // Set bits 23 to 22 as shift amount
+      // Set bits 15 to 10 as shift amount
+      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
+    } else if (line.opcode == MADD || line.opcode == MSUB) {
+      // Multiply
 
-      
+      // Set bit 28 as 1
+      result = set_bits(result, 28, 28, 1);
+      // Set bits 24 to 21 as 1000
+      result = set_bits(result, 21, 24, 0x8);
+      // Set bit 15 to M
+      if (line.opcode == MSUB) {
+        result = set_bits(result, 15, 15, 1);
+      }
+      // Set bits 14 to 10 as value of ra
+      result = set_bits(result, 10, 14, convert_REG(line.operands[3]));
+    } else {
+      // Logical
+
+      // Set bit 28 as 0
+      result = set_bits(result, 28, 28, 0);
+      // Set bit 24 as 1
+      result = set_bits(result, 24, 24, 0);
+      // Set bits 23 to 22 as shift type
+      result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
+      // Set bit 21 as N
+      if (line.opcode == BIC || line.opcode == ORN || line.opcode == EON || line.opcode == BICS) {
+        result = set_bits(result, 21, 21, 1);
+      }
+      // Set bits 15 to 10 as shift amount
+      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
     }
-
-
   }
 
   return result;

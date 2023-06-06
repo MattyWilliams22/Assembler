@@ -42,6 +42,48 @@ InstructionMapping instructionMappings[] = {
     {".int", DIR, &get_types_dir},
 };
 
+void alias(token_line line) {
+  int zr_pos;
+  if (line.opcode == CMP) {
+    line.opcode == SUBS;
+    zr_pos = 0;
+    line.op_count++;
+  } else if (line.opcode == CMN) {
+    line.opcode == ADDS;
+    zr_pos = 0;
+  } else if (line.opcode == NEG) {
+    line.opcode == SUB;
+    zr_pos = 1;
+  } else if (line.opcode == NEGS) {
+    line.opcode == SUBS;
+    zr_pos = 1;
+  } else if (line.opcode == TST) {
+    line.opcode == ANDS;
+    zr_pos = 0;
+  } else if (line.opcode == MVN) {
+    line.opcode == ORN;
+    zr_pos = 1;
+  } else if (line.opcode == MOV) {
+    line.opcode == ORR;
+    zr_pos = 1;
+  } else if (line.opcode == MUL) {
+    line.opcode == MADD;
+    zr_pos = 3;
+  } else if (line.opcode == MSUB) {
+    line.opcode == ORR;
+    zr_pos = 3;
+  }
+  if (zr_pos != NULL) {
+    for (int i = op_count; i > zr_pos; i--) {
+      line.operand[i] = line.operand[i-1];
+    }
+    line.operand[zr_pos].type == REG;
+    line.operand[zr_pos].word == "x32";
+    line.op_count++;
+  }
+  
+}
+
 void get_types_add(operand *operands, int op_count) {
   operands[0].type = REG;
   operands[1].type = REG;
@@ -345,6 +387,7 @@ token_line* read_assembly(FILE* fp, int nlines) {
 
   while ((read = getline(&line, &len, fp)) != -1) {
     token_lines[count] = process_line(line);
+    alias(token_lines[count]);
     count++;
   }
 
