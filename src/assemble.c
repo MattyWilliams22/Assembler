@@ -33,7 +33,7 @@ binary set_bits(binary input, int start, int end, binary value) {
   for (int i = start; i <= end; i++) {
     mask = mask | (1 << i);
   }
-  return (input & ~mask) | (value << start);
+  return (input & ~mask) | ((value << start) && mask);
 }
 
 // Applies the shift to the binary input
