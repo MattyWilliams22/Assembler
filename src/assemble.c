@@ -113,14 +113,6 @@ binary convert_IMM(operand op) {
   }
 }
 
-// Converts a label to its binary representation
-binary convert_LABEL(operand op) {
-  if (op.type != LABEL_OPERAND) {
-    return NULL;
-  }
-  // Get from symbol table?
-}
-
 binary convert_COND(operand op) {
   if (op.type != COND) {
     return NULL;
@@ -286,26 +278,26 @@ binary assemble_B(token_line line) {
   binary result = 0;
   if (line.opcode == B) {
     // Unconditional
+    // Set bits 31 to 26 to 000101
     result = set_bits(result, 26, 31, 0x5);
-    if (line.operands[0].type == IMM) {
-      result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
-    } else {
-      result = set_bits(result, 0, 25, convert_LABEL(line.operands[0]));
-    }
+    // Set bits 25 to 0 to the value of the literal
+    result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
   } else if (line.opcode == BR) {
     // Register
+    // Set bits 31 to 10 to 1101011000011111000000
     result = set_bits(result, 10, 31, 0x3587c0);
+    // Set bits 9 to 5 to value of xn
     result = set_bits(result, 5, 9, convert_REG(line.operands[0]));
+    // Set bits 4 to 0 to 00000
     result = set_bits(result, 0, 4, 0);
   } else if (line.opcode == BCOND) {
     // Conditional
+    // Set bits 31 to 24 to 01010100
     result = set_bits(result, 24, 31, 0x54);
+    // Set bits 4 to 0 to cond
     result = set_bits(result, 0, 4, convert_COND(line.operands[0]));
-    if (line.operands[0].type == IMM) {
-      result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
-    } else {
-      result = set_bits(result, 5, 23, convert_LABEL(line.operands[1]));
-    }
+    // Set bits 23 to 5 to the value of the literal
+    result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
   } else {
     return NULL;
   }
@@ -355,21 +347,25 @@ binary assemble_SDT(token_line line) {
 
   if (line.opcode == LDR && line.operand_count == 2) {
     // Load literal
+    // Set bit 31 to 0
     result = set_bits(result, 31, 31, 0);
+    // Set bits 29 to 24 to 011000
     result = set_bits(result, 24, 29, 0x18);
+    // Set bits 23 to 5 to simm19
     result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
+    // Set bits 4 to 0 to rt
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
   } else {
     // Single Data Transfer
 
-    // 0 L
+    // Set bits 23 to 22 to 0L
     if (line.opcode == LDR) {
       result = set_bits(result, 22, 23, 1);
     } else {
       result = set_bits(result, 22, 23, 0);
     }
 
-    // U
+     // Set bit 24 to U
     addressing_mode mode = get_addressing_mode(line);
     int len = strlen(line.operands[2].word);
     if (mode == UNSIGNED_OFF) {
@@ -378,10 +374,15 @@ binary assemble_SDT(token_line line) {
       result = set_bits(result, 24, 24, 0);
     }
 
+    // Set bit 31 to 1
     result = set_bits(result, 31, 31, 1);
+    // Set bits 29 to 25 to 11100
     result = set_bits(result, 25, 29, 0x1c);
+    // Set bits 4 to 0 to rt
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
+    // Set bits 9 to 5 to xn
     result = set_bits(result, 5, 9, convert_REG(line.operands[1]));
+    // Set bits 21 to 10 to offset
     result = set_bits(result, 10, 21, convert_ADDR_MODE(line.operands[2], mode));
   }
   return result;

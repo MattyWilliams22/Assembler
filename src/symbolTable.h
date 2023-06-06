@@ -7,10 +7,17 @@
 typedef char* Key;
 typedef uint32_t Value;
 
+typedef struct {
+  operand operand;
+  int line;
+} dependency;
+
 // Linked List Node
 typedef struct Node{
-  Key key;
-  Value value;
+  Key label;
+  Value address;
+  dependency *dependencies;
+  int no_dependencies;
   struct Node *next;
 } Node_t;
 
@@ -18,5 +25,10 @@ typedef struct Node{
 typedef struct {
   Node_t *head;
 } Symbol_Table;
+
+// Prototypes
+void add_dependency(Symbol_Table *table, Key label, operand op, int line_no);
+void add_address(Symbol_Table *table, Key label, int line_no);
+void set_addresses(Symbol_Table *table, Node_t node);
 
 #endif

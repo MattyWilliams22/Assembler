@@ -2,6 +2,10 @@
 #include <string.h>
 #include <stdbool.h>
 #include "tokenizer.h"
+#include "symbolTable.h"
+
+int line_count;
+Symbol_Table labelTable;
 
 // get_types_... functions get the types of every operand in the line
 // They are grouped by operand pattern as seen in table 2
@@ -202,7 +206,8 @@ void get_types_b(operand *operands, int op_count) {
     operands[0].type = IMM;
   } else {
     // <label>
-    operands[0].type = LABEL_OPERAND;
+    operands[0].type = IMM;
+    add_dependency(labelTable, operands[0].word, operands[0], line_count);
   }
 }
 
@@ -214,7 +219,8 @@ void get_types_bcond(operand *operands, int op_count) {
     operands[1].type = IMM;
   } else {
     // <cond>, <label>
-    operands[1].type = LABEL_OPERAND;
+    operands[1].type = IMM;
+    add_dependency(labelTable, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -260,7 +266,8 @@ void get_types_ldr(operand *operands, int op_count) {
     operands[1].type = IMM;
   } else {
     // <Rt>, <label>
-    operands[1].type = LABEL_OPERAND;
+    operands[1].type = IMM;
+    add_dependency(labelTable, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -338,6 +345,7 @@ token_line process_line(char * line) {
     int length = strlen(instr_str);
     if (instr_str[length - 1] == ':') {
       opcode = LABEL_OPCODE;
+      add_address(labelTable, operands[1].word, line_count);
     }
   }
 
@@ -375,7 +383,7 @@ token_line* read_assembly(FILE* fp, int nlines) {
   char* line = NULL;
   size_t len = 0;
   int read;
-  int count = 0;
+  line_count = 0;
   token_line* token_lines = malloc(nlines * sizeof(token_line));
 
   if (token_lines == NULL) {
@@ -386,9 +394,12 @@ token_line* read_assembly(FILE* fp, int nlines) {
   }
 
   while ((read = getline(&line, &len, fp)) != -1) {
-    token_lines[count] = process_line(line);
-    alias(token_lines[count]);
-    count++;
+    token_line current_line = process_line(line);
+    if (current_line.opcode != UNRECOGNISED_OPCODE) {
+      token_lines[line_count] = current_line;
+      alias(token_lines[line_count]);
+      line_count++;
+    }
   }
 
   fclose(fp);

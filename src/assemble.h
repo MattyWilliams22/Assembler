@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include "assembleutils.h"
 
-typedef uint32_t binary;
-
 // Prototypes
 binary assemble_DP(token_line line);
 binary assemble_B(token_line line);

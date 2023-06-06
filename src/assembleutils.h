@@ -30,7 +30,6 @@ typedef enum {
   // May need to differentiate between IMM and SIMM
   IMM,
   SHIFT,
-  LABEL_OPERAND,
   COND,
   UNRECOGNISED_OPERAND
 } operand_type;
@@ -46,6 +45,6 @@ typedef struct {
   int operand_count;
 } token_line;
 
-
+typedef uint32_t binary;
 
 #endif
