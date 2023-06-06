@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 typedef enum {
   ADD,ADDS,SUB,SUBS,
@@ -44,6 +45,11 @@ typedef struct {
   operand *operands;
   int operand_count;
 } token_line;
+
+typedef struct {
+  token_line *token_lines;
+  int line_count;
+} token_array;
 
 typedef uint32_t binary;
 

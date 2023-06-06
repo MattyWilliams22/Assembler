@@ -5,7 +5,7 @@
 #include "symbolTable.h"
 
 int line_count;
-Symbol_Table labelTable;
+Symbol_Table *labelTable;
 
 // get_types_... functions get the types of every operand in the line
 // They are grouped by operand pattern as seen in table 2
@@ -47,43 +47,42 @@ InstructionMapping instructionMappings[] = {
 };
 
 void alias(token_line line) {
-  int zr_pos;
+  int zr_pos = -1;
   if (line.opcode == CMP) {
-    line.opcode == SUBS;
+    line.opcode = SUBS;
     zr_pos = 0;
-    line.op_count++;
   } else if (line.opcode == CMN) {
-    line.opcode == ADDS;
+    line.opcode = ADDS;
     zr_pos = 0;
   } else if (line.opcode == NEG) {
-    line.opcode == SUB;
+    line.opcode = SUB;
     zr_pos = 1;
   } else if (line.opcode == NEGS) {
-    line.opcode == SUBS;
+    line.opcode = SUBS;
     zr_pos = 1;
   } else if (line.opcode == TST) {
-    line.opcode == ANDS;
+    line.opcode = ANDS;
     zr_pos = 0;
   } else if (line.opcode == MVN) {
-    line.opcode == ORN;
+    line.opcode = ORN;
     zr_pos = 1;
   } else if (line.opcode == MOV) {
-    line.opcode == ORR;
+    line.opcode = ORR;
     zr_pos = 1;
   } else if (line.opcode == MUL) {
-    line.opcode == MADD;
+    line.opcode = MADD;
     zr_pos = 3;
   } else if (line.opcode == MSUB) {
-    line.opcode == ORR;
+    line.opcode = ORR;
     zr_pos = 3;
   }
-  if (zr_pos != NULL) {
-    for (int i = op_count; i > zr_pos; i--) {
-      line.operand[i] = line.operand[i-1];
+  if (zr_pos != -1) {
+    for (int i = line.operand_count; i > zr_pos; i--) {
+      line.operands[i] = line.operands[i-1];
     }
-    line.operand[zr_pos].type == REG;
-    line.operand[zr_pos].word == "x32";
-    line.op_count++;
+    line.operands[zr_pos].type = REG;
+    line.operands[zr_pos].word = "x32";
+    line.operand_count++;
   }
   
 }
@@ -310,7 +309,7 @@ token_line process_line(char * line) {
     string_count++;
   }
 
-  char *sentence = "";
+  char *sentence = malloc(string_count * 10 * sizeof(char));
   for (int i = 0; i < string_count; i++) {
     char *current_word = strings[i];  
     int length = strlen(current_word);
@@ -329,6 +328,8 @@ token_line process_line(char * line) {
     word_count++;
   }
 
+  free(sentence);
+
   func_ptr_type get_types;
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
@@ -341,20 +342,7 @@ token_line process_line(char * line) {
       break;
     }
   }
-  if (opcode == UNRECOGNISED_OPCODE) {
-    int length = strlen(instr_str);
-    if (instr_str[length - 1] == ':') {
-      opcode = LABEL_OPCODE;
-      add_address(labelTable, operands[1].word, line_count);
-    }
-  }
-
-  if(opcode == AND) {
-    if(is_halt(opcode, words, word_count)) {
-      opcode = HALT;
-      get_types = &get_types_null;
-    }
-  }
+  
 
   if (opcode == LDR && word_count != 2) {
     get_types = &get_types_str;
@@ -365,6 +353,22 @@ token_line process_line(char * line) {
 
   for (int i = 0; i < word_count; i++) {
     current_operands[i].word = &words[i];
+  }
+
+  if (opcode == UNRECOGNISED_OPCODE) {
+    int length = strlen(instr_str);
+    if (instr_str[length - 1] == ':') {
+      opcode = LABEL_OPCODE;
+      get_types = &get_types_null;
+      add_address(labelTable, current_operands[1].word, line_count);
+    }
+  }
+
+  if(opcode == AND) {
+    if(is_halt(opcode, current_operands, word_count)) {
+      opcode = HALT;
+      get_types = &get_types_null;
+    }
   }
 
   if (has_function) {
@@ -379,30 +383,31 @@ token_line process_line(char * line) {
 }
 
 // Reads an assembly code file and processes each line into a token_line
-token_line* read_assembly(FILE* fp, int nlines) {
+token_array read_assembly(FILE* fp, int nlines) {
   char* line = NULL;
   size_t len = 0;
   int read;
-  line_count = 0;
-  token_line* token_lines = malloc(nlines * sizeof(token_line));
+  token_array token_array;
+  token_array.line_count = 0;
+  token_array.token_lines = malloc(nlines * sizeof(token_line));
 
-  if (token_lines == NULL) {
+  if (token_array.token_lines == NULL) {
     // Handle memory allocation failure
     perror("Memory allocation failed");
     fclose(fp);
-    return NULL;
+    return token_array;
   }
 
   while ((read = getline(&line, &len, fp)) != -1) {
     token_line current_line = process_line(line);
     if (current_line.opcode != UNRECOGNISED_OPCODE) {
-      token_lines[line_count] = current_line;
-      alias(token_lines[line_count]);
-      line_count++;
+      token_array.token_lines[token_array.line_count] = current_line;
+      alias(token_array.token_lines[token_array.line_count]);
+      token_array.line_count++;
     }
   }
 
   fclose(fp);
   free(line);
-  return token_lines;
+  return token_array;
 }

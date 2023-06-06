@@ -38,9 +38,6 @@ binary set_bits(binary input, int start, int end, binary value) {
 
 // Applies the shift to the binary input
 binary convert_SHIFT(operand op) {
-  if (op.type != SHIFT) {
-    return NULL;
-  }
   if (op.word[0] == 'l') {
     // lsl or lsr
     if (op.word[2] == 'l') {
@@ -59,21 +56,6 @@ binary convert_SHIFT(operand op) {
   }
 }
 
-// Gets the number of bits to shift by
-binary get_shift_amount(operand op) {
-  if (op.type != SHIFT) {
-    return NULL;
-  }
-  int length = strlen(op.word);
-  for (int i = 0; i < length; i++) {
-    if (op.word[i] == '#') {
-      op.word = &op.word[i];
-    }
-  }
-  return convert_IMM(op);
-}
-
-
 // Converts an opcode to its binary representation
 binary convert_OPCODE(opcode_name name) {
   for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
@@ -81,25 +63,16 @@ binary convert_OPCODE(opcode_name name) {
       return assembleMappings[i].opc;
     }
   }
+  return 0xff;
 };
-
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
-  if (op.type != REG) {
-    return NULL;
-  }
   return atoi(&op.word[1]);
 }
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
-  // Need to handle if IMM is signed or not
-
-  if (op.type != IMM) {
-    return NULL;
-  }
-
   if (op.word[0] == '#') {
     op.word = &op.word[1];
   }
@@ -113,10 +86,18 @@ binary convert_IMM(operand op) {
   }
 }
 
-binary convert_COND(operand op) {
-  if (op.type != COND) {
-    return NULL;
+// Gets the number of bits to shift by
+binary get_shift_amount(operand op) {
+  int length = strlen(op.word);
+  for (int i = 0; i < length; i++) {
+    if (op.word[i] == '#') {
+      op.word = &op.word[i];
+    }
   }
+  return convert_IMM(op);
+}
+
+binary convert_COND(operand op) {
   switch (op.word[0]) {
     case 'e':
       // eq
@@ -147,7 +128,7 @@ binary convert_COND(operand op) {
       return 0xe;
     default:
       // error
-      return NULL;
+      return 0xf;
   }
 }
 
@@ -269,7 +250,6 @@ binary assemble_DP(token_line line) {
       result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
     }
   }
-
   return result;
 }
 
@@ -298,9 +278,8 @@ binary assemble_B(token_line line) {
     result = set_bits(result, 0, 4, convert_COND(line.operands[0]));
     // Set bits 23 to 5 to the value of the literal
     result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
-  } else {
-    return NULL;
   }
+  return result;
 }
 
 
@@ -367,7 +346,6 @@ binary assemble_SDT(token_line line) {
 
      // Set bit 24 to U
     addressing_mode mode = get_addressing_mode(line);
-    int len = strlen(line.operands[2].word);
     if (mode == UNSIGNED_OFF) {
       result = set_bits(result, 24, 24, 1);
     } else {
@@ -394,20 +372,17 @@ binary assemble_SP(token_line line) {
     return NOOP;
   } else if (line.opcode == DIR) {
     return convert_IMM(line.operands[0]);
-  } else if (line.opcode == HALT) {
-    return HALT;
   } else {
-    return NULL;
+    // line.opcode == HALT
+    return HALT;
   }
 }
 
 binary assemble_line(token_line line) {
-  bool has_function = false;
   func_ptr assemble_func;
   for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
     if (line.opcode == assembleMappings[i].opcode) {
       assemble_func = assembleMappings[i].function;
-      has_function = true;
       break;
     }
   }
@@ -447,16 +422,16 @@ void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
 }
 
 void print_token_line(token_line line) {
-  printf("%s ", line.opcode);
-  for (int i = 0; i < line.op_count; i++) {
-    printf("%s: %s", line.operands[i].type, line.operands[i].word);
+  printf("| Opcode: %d | ", line.opcode);
+  for (int i = 0; i < line.operand_count; i++) {
+    printf("%s | ", line.operands[i].word);
   }
   printf("\n");
 }
 
 void print_binary_line(binary line) {
   for (int i = 31; i >= 0; --i) {
-    printf("%"PRIu32, line >> i & 1);
+    printf("%u", line >> i & 1);
   }
   printf("\n");
 }
@@ -468,9 +443,7 @@ void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
   }
   printf("Binary output:\n\n");
   for (int i = 0; i < nlines; i++) {
-    if (binary_lines[i] != NULL) {
-      print_binary_line(binary_lines[i]);
-    }
+    print_binary_line(binary_lines[i]);
   }
 }
 
@@ -486,12 +459,12 @@ int main(int argc, char **argv) {
   int nlines = count_lines(input);
 
   // Convert lines of file to an array of token_lines
-  token_line* token_lines = read_assembly(input, nlines);
+  token_array token_array = read_assembly(input, nlines);
 
   // Convert token_lines to binary_lines
-  binary binary_lines[nlines];
-  for (int i = 0; i < nlines; i++) {
-    binary_lines[i] = assemble_line(token_lines[i]);
+  binary binary_lines[token_array.line_count];
+  for (int i = 0; i < token_array.line_count; i++) {
+    binary_lines[i] = assemble_line(token_array.token_lines[i]);
   }
 
 
@@ -502,10 +475,10 @@ int main(int argc, char **argv) {
 	}
 
   // Writes binary_lines to output file
-  write_to_binary_file(output, binary_lines, nlines);
+  write_to_binary_file(output, binary_lines, token_array.line_count);
 
   // TEMPORARY Prints lines for testing
-  print_lines(token_lines, binary_lines, nlines);
+  print_lines(token_array.token_lines, binary_lines, token_array.line_count);
 
   return EXIT_SUCCESS;
 }
