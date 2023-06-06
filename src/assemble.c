@@ -7,6 +7,15 @@
 #define HALT 0x8a000000
 #define NOOP 0xd503201f
 
+// Sets bits in given binary to the given value
+binary set_bits(binary input, int start, int end, binary value) {
+  binary mask = 0;
+  for (int i = start; i <= end; i++) {
+    mask = mask | (1 << i);
+  }
+  return (input & ~mask) | (value << start);
+}
+
 // Applies the shift to the binary input
 binary convert_SHIFT(operand shift) {
   if (shift.type != SHIFT) {
@@ -74,6 +83,7 @@ binary convert_LABEL(operand op) {
   if (op.type != LABEL) {
     return NULL;
   }
+  // Get from symbol table?
 }
 
 binary convert_COND(operand op) {
@@ -134,15 +144,6 @@ binary convert_ADDR_MODE(operand op, addressing_mode mode) {
   return result;
 }
 
-// Sets bits in given binary to the given value
-binary set_bits(binary input, int start, int end, binary value) {
-  binary mask = 0;
-  for (int i = start; i <= end; i++) {
-    mask = mask | (1 << i);
-  }
-  return (input & ~mask) | (value << start);
-}
-
 // Data Processing Instruction Assembler
 binary assemble_DP(token_line line) {
   binary result = 0;
@@ -156,6 +157,9 @@ binary assemble_DP(token_line line) {
 
   // Immediate
   if (line.operands[2].type == IMM) {
+    // Must add case for wide moves
+
+    
     // Set bits 4 to 0 as value of Rd
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
     // Set bits 28 to 26 as 100
@@ -205,7 +209,6 @@ binary assemble_DP(token_line line) {
 
       
     }
-    
 
 
   }
