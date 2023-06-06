@@ -446,6 +446,34 @@ void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
   }
 }
 
+void print_token_line(token_line line) {
+  printf("%s ", line.opcode);
+  for (int i = 0; i < line.op_count; i++) {
+    printf("%s: %s", line.operands[i].type, line.operands[i].word);
+  }
+  printf("\n");
+}
+
+void print_binary_line(binary line) {
+  for (int i = 31; i >= 0; --i) {
+    printf("%"PRIu32, line >> i & 1);
+  }
+  printf("\n");
+}
+
+void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
+  printf("Tokenised version of input:\n\n");
+  for (int i = 0; i < nlines; i++) {
+    print_token_line(token_lines[i]);
+  }
+  printf("Binary output:\n\n");
+  for (int i = 0; i < nlines; i++) {
+    if (binary_lines[i] != NULL) {
+      print_binary_line(binary_lines[i]);
+    }
+  }
+}
+
 int main(int argc, char **argv) {
 
   FILE* input = fopen(argv[1], "rt");
@@ -475,6 +503,9 @@ int main(int argc, char **argv) {
 
   // Writes binary_lines to output file
   write_to_binary_file(output, binary_lines, nlines);
+
+  // TEMPORARY Prints lines for testing
+  print_lines(token_lines, binary_lines, nlines);
 
   return EXIT_SUCCESS;
 }
