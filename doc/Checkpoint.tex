@@ -40,6 +40,28 @@ everyone is on the same page and to address any challenges promptly.
 
 \subsection*{Emulator Structure}
 
+We used a modular approach by splitting the code into separate files. Our file structure included:
+\begin{itemize}
+    \item Setup File: This file handled memory initialisation, processing instructions, and other setup-related operations. 
+        We implemented memory as an array and used structs for modelling PSTATE and state of the memory and registers.
+    \item Instructions File: Each instruction was implemented as a separate function within this file, allowing for easy 
+        modification and addition of new instructions.
+    \item Utilities File: We created a utilities file containing commonly used functions, such as 32-bit and 64-bit mode handling 
+        and sign extension. These utility functions were reusable across various instructions and improved code organisation.
+    \item Main File: The entry point for running the emulator.
+\end{itemize}
 
+\subsection*{Reusability for Assembler}
+In our opinion, the Emulator code cannot be directly reused for the Assembler.
+
+\subsection*{Future Challenges}
+\begin{itemize}
+    \item Splitting Up the Work: As mentioned earlier, the project is somewhat sequential. 
+    Making it hard to parallelise the work since certain tasks need to be completed before moving on to others. 
+    To address this, we have been working collaboratively and there has been a lot of communication, making sure we let each other know
+    what we have been doing and on what stage of implementation we are.
+    \item Reducing and Cleaning Up the Code: As the code length increases, it has been hard to manage and maintain it. To mitigate this,
+    we have been removing duplicated and unused code. We have been having code reviews, during which we indentified areas of improvement.
+\end{itemize}
 
 \end{document}
