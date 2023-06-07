@@ -282,8 +282,6 @@ binary assemble_B(token_line line) {
   return result;
 }
 
-
-
 addressing_mode get_addressing_mode(token_line line) {
   line.operands[1].word = &line.operands[1].word[1];
   int length1 = strlen(line.operands[2].word);

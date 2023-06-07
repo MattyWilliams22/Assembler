@@ -1,6 +1,7 @@
 #ifndef SYMBOLTABLE_H
 #define SYMBOLTABLE_H
 
+#include "assembleutils.h"
 #include <stdint.h>
 
 // Aliases for types
