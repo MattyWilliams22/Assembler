@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "emulatesetup.h"
-#include "instructions.h"
+#include "emulateinstructions.h"
 
 state STATE;
 
