@@ -1,0 +1,67 @@
+# use the "gcc" image so that we have access to the GCC compiler
+image: gcc
+
+variables:
+  # Make sure we don't get stuck at a prompt for input
+  DEBIAN_FRONTEND: noninteractive
+
+# Run build separately at first to make sure things compile
+build-all:
+  stage: build
+  before_script:
+    - apt-get update -y && apt-get install make build-essential -y
+  script:
+    - cd src; make clean all
+
+# test the emulator
+test-all-emulator:
+  stage: test
+  before_script:
+    # install basic depedencies
+    - apt-get update -y && apt-get install make build-essential python3 python3-full python3-venv python3-pip zip unzip -y
+    # Unzip testsuite
+    - cd vendor
+    - unzip -q -o armv8_testsuite.zip -d armv8_testsuite
+    # Install testsuite deps
+    - cd armv8_testsuite/armv8_testsuite
+    - ./install
+    - cd ../../..
+    
+  script:
+    # build src
+    - cd src
+    - make clean all
+    # run test suite
+    - cd ../vendor/armv8_testsuite/armv8_testsuite
+    - source ./.venv/bin/activate
+    # To see logs, replace -p below with -v or even -pv
+    # We save logs to a file so we can check if there were any fails
+    - ./run -E -e ../../../src/emulate -a ../../../src/assemble -pv 2>&1 | tee emulate.log
+    - echo "grep -q -e 'INCORRECT' -e 'FAIL' emulate.log && exit 1 || true" | bash
+
+# test the assembler in parallel with emulator
+test-all-assembler:
+  stage: test
+  before_script:
+    # install basic depedencies
+    - apt-get update -y && apt-get install make build-essential python3 python3-full python3-venv python3-pip zip unzip -y
+    # Unzip testsuite
+    - cd vendor
+    - unzip -q -o armv8_testsuite.zip -d armv8_testsuite
+    # Install testsuite deps
+    - cd armv8_testsuite/armv8_testsuite
+    - ./install
+    - cd ../../..
+    
+  script:
+    # build src
+    - cd src
+    - make clean all
+    # run test suite
+    - cd ../vendor/armv8_testsuite/armv8_testsuite
+    - source ./.venv/bin/activate
+    # runs just the assembler
+    # To see logs, replace -p below with -v or even -pv
+    # We save logs to a file so we can check if there were any fails
+    - ./run -A -e ../../../src/emulate -a ../../../src/assemble -pv 2>&1 | tee assemble.log
+    - echo "grep -q -e 'INCORRECT' -e 'FAIL' assemble.log && exit 1 || true" | bash
