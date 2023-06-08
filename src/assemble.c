@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "assemble.h"
@@ -64,7 +65,7 @@ binary convert_OPCODE(opcode_name name) {
     }
   }
   return 0xff;
-};
+}
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
@@ -456,8 +457,21 @@ int main(int argc, char **argv) {
   // Get number of lines in input file
   int nlines = count_lines(input);
 
+  // Close file
+  fclose(input);
+
+  // Reopen file
+  FILE* fp = fopen(argv[1], "rt");
+	if (input == NULL) {
+		perror("Could not open input file.");
+		exit(EXIT_FAILURE);
+	}
+
   // Convert lines of file to an array of token_lines
-  token_array token_array = read_assembly(input, nlines);
+  token_array token_array = read_assembly(fp, nlines);
+
+  // Close file
+  fclose(fp);
 
   // Convert token_lines to binary_lines
   binary binary_lines[token_array.line_count];
@@ -474,6 +488,9 @@ int main(int argc, char **argv) {
 
   // Writes binary_lines to output file
   write_to_binary_file(output, binary_lines, token_array.line_count);
+
+  // Close file
+  fclose(output);
 
   // TEMPORARY Prints lines for testing
   print_lines(token_array.token_lines, binary_lines, token_array.line_count);
