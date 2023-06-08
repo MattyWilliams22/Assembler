@@ -64,7 +64,7 @@ binary convert_OPCODE(opcode_name name) {
     }
   }
   return 0xff;
-};
+}
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
