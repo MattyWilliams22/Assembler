@@ -70,7 +70,7 @@ token_line *make_token_line(opcode_name opcode, operand *operands, int op_count)
 }
 
 void free_token_line(token_line line) {
-  for (int i = 0; i < line.op_count; i++) {
+  for (int i = 0; i < line.operand_count; i++) {
     free_operand(line.operands[i]);
   }
   free(&line);
