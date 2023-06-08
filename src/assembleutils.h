@@ -41,7 +41,7 @@ typedef struct {
   char *word;
 } operand;
 
-operand *make_operand(operand_type type, char* word) {
+operand *make_operand(operand_type type) {
   operand *new = malloc(sizeof(operand_type) + sizeof(char*));
   assert (new != NULL);
   new->type = type;
@@ -61,7 +61,7 @@ typedef struct {
   int operand_count;
 } token_line;
 
-token_line *make_token_line(opcode_name opcode, operand *operands, int op_count) {
+token_line *make_token_line(opcode_name opcode, int op_count) {
   token_line *new = malloc(sizeof(opcode_name) + sizeof(operand*));
   assert (new != NULL);
   new->opcode = opcode;
@@ -82,11 +82,11 @@ typedef struct {
   int line_count;
 } token_array;
 
-token_array *make_token_array(token_line *token_lines, int line_count) {
+token_array *make_token_array(int line_count) {
   token_array *new = malloc(sizeof(token_line*) + sizeof(int));
   assert (new != NULL);
   new->token_lines = malloc((sizeof(operand_type) + sizeof(char*)) * 6 * line_count);
-  new->line_count = line_count;
+  new->line_count = 0;
   return new;
 }
 

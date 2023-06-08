@@ -388,9 +388,8 @@ token_array read_assembly(FILE* fp, int nlines) {
   char* line = NULL;
   size_t len = 0;
   int read;
-  token_array token_array;
-  token_array.line_count = 0;
-  token_array.token_lines = malloc(nlines * sizeof(token_line));
+  token_array array = make_token_array(nlines);
+  array->line_count = 0;
 
   if (token_array.token_lines == NULL) {
     // Handle memory allocation failure
@@ -402,13 +401,12 @@ token_array read_assembly(FILE* fp, int nlines) {
   while ((read = getline(&line, &len, fp)) != -1) {
     token_line current_line = process_line(line);
     if (current_line.opcode != UNRECOGNISED_OPCODE) {
-      token_array.token_lines[token_array.line_count] = current_line;
-      alias(token_array.token_lines[token_array.line_count]);
-      token_array.line_count++;
+      array->token_lines[array->line_count] = current_line;
+      alias(array->token_lines[array->line_count]);
+      array->line_count++;
     }
   }
 
   fclose(fp);
-  free(line);
-  return token_array;
+  return array;
 }
