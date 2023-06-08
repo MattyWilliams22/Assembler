@@ -50,7 +50,7 @@ operand *make_operand(operand_type type, char* word) {
   return new;
 }
 
-void free_operand(operand op) {
+void free_operand(operand *op) {
   free(op->word);
   free(op);
 }
@@ -69,9 +69,9 @@ token_line *make_token_line(opcode_name opcode, operand *operands, int op_count)
   return new;
 }
 
-void free_token_line(token_line line) {
-  for (int i = 0; i < line.operand_count; i++) {
-    free_operand(line.operands[i]);
+void free_token_line(token_line *line) {
+  for (int i = 0; i < line->operand_count; i++) {
+    free_operand(line->operands[i]);
   }
   free(line->operands);
   free(line);
@@ -90,9 +90,9 @@ token_array *make_token_array(token_line *token_lines, int line_count) {
   return new;
 }
 
-void free_token_array(token_array array) {
-  for (int i = 0; i < array.line_count; i++) {
-    free_token_line(array.token_lines[i]);
+void free_token_array(token_array *array) {
+  for (int i = 0; i < array->line_count; i++) {
+    free_token_line(array->token_lines[i]);
   }
   free(array->token_lines);
   free(array);
