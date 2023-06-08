@@ -8,6 +8,54 @@
 extern state STATE;
 
 /**
+ * Executes a given arithmetic instruction based on the opcode.
+ *
+ * @param op1 The first operand to use in the arithmetic calculation
+ * @param op2 The second operand to use in the arithmetic calculation
+ * @param sf The sf bit of the instruction
+ * @param opc The opcode which determines which kind of arithmetic calculation to perform
+ * @return The result of the arithmetic calculation
+ */
+reg arithmetic_instructions(reg op1, reg op2, byte sf, byte opc) {
+  reg result; 
+  int access_mode_shift = (sf ? 63 : 31);
+
+  // Decide which type of operation to perform based on the opcode
+  switch (opc) {
+    case 0x0:  // ADD
+      result = op1 + op2;
+      break;
+
+    case 0x1:  // ADDS
+      result = op1 + op2;
+      STATE.pstate.n = (result >> access_mode_shift) & 0x1;
+      STATE.pstate.z = (result == 0);
+      STATE.pstate.c = (result < op1) || (result < op2);
+      STATE.pstate.v =  (op1 < 0 && op2 < 0 && result >= 0) || (op1 >= 0 && op2 >= 0 && result < 0);;
+      break;
+
+    case 0x2:  // SUB
+      result = op1 - op2;
+      break;
+
+    case 0x3:  // SUBS
+      result = op1 - op2;
+      STATE.pstate.n = (result >> access_mode_shift) & 0x1;
+      STATE.pstate.z = (result == 0);
+      if (sf == 1) {
+        STATE.pstate.c = (op1 >= op2);
+      } else {
+        STATE.pstate.c = (unsigned) op1 >= (unsigned) op2;
+      }
+      STATE.pstate.v = (((op1 ^ result) >> access_mode_shift) & 0x1) && (((op1 ^ op2) >> access_mode_shift) & 0x1);
+      break;
+  }
+
+  return result;
+}
+
+
+/**
  * Given an instruction of the type "Data Processing Immediate", processes and executes the instruction.
  *
  * @param instr The "Data Processing Immediate" instruction to be executed
@@ -35,34 +83,8 @@ void data_processing_immediate(instruction instr) {
 
     uint64_t op = (sh ? (imm12 << 12) : imm12);
     reg reg_op = choose_access_mode(sf, STATE.registers[rn]);
-    int access_mode_shift = (sf ? 63 : 31);
 
-    // Decide which type of operation to perform based on the opcode
-    switch (opc) {
-      case 0x0:  // ADD
-        result = reg_op + op;
-        break;
-
-      case 0x1:  // ADDS
-        result = reg_op + op;
-        STATE.pstate.n = (result >> access_mode_shift) & 0x1;
-        STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (result < reg_op);
-        STATE.pstate.v = (((reg_op ^ result) >> access_mode_shift) & 0x1) && (((reg_op ^ op) >> access_mode_shift) & 0x1);
-        break;
-
-      case 0x2:  // SUB
-        result = reg_op - op;
-        break;
-
-      case 0x3:  // SUBS
-        result = reg_op - op;
-        STATE.pstate.n = (result >> access_mode_shift) & 0x1;
-        STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (reg_op >= op);
-        STATE.pstate.v = (((reg_op ^ result) >> access_mode_shift) & 0x1) && (((reg_op ^ op) >> access_mode_shift) & 0x1);
-        break;
-    }
+    result = arithmetic_instructions(reg_op, op, sf, opc);
   }
 
   // Wide Move - check opi is 101
@@ -217,39 +239,8 @@ void data_processing_register(instruction instr) {
     // Arithmetic Instructions
     if ((((instr >> 24) & 0x1) == 1) && (((instr >> 21) & 0x1) == 0)) {
       long int op = choose_access_mode(sf, (rn == 31 ? 0 : STATE.registers[rn]));
-      int access_mode_shift = (sf ? 63 : 31);
-
-      // Decide which type of operation to perform based on the opcode
-      switch (opc) {
-        case 0x0:  // ADD
-          result = op + op2;
-          break;
-
-        case 0x1:  // ADDS
-          result = op + op2;
-          STATE.pstate.n = (result >> access_mode_shift) & 0x1;
-          STATE.pstate.z = (result == 0);
-          STATE.pstate.c = (result < op) || (result < op2);
-          STATE.pstate.v = (op < 0 && op2 < 0 && result >= 0) || (op >= 0 && op2 >= 0 && result < 0);
-          break;
-
-        case 0x2:  // SUB
-          result = op - op2;
-          break;
-
-        case 0x3:  // SUBS
-          result = op - op2;
-
-          STATE.pstate.n = (result >> access_mode_shift) & 0x1;
-          STATE.pstate.z = (result == 0);
-          if (sf == 1) {
-            STATE.pstate.c = (op >= op2);
-          } else {
-            STATE.pstate.c = (unsigned) op >= (unsigned) op2;
-          }
-          STATE.pstate.v = (((op ^ result) >> access_mode_shift) & 0x1) && (((op ^ op2) >> access_mode_shift) & 0x1);
-          break;
-      }
+  
+      result = arithmetic_instructions(op, op2, sf, opc);
     }
   }
 
