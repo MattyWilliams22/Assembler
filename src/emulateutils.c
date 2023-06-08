@@ -1,4 +1,6 @@
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include "emulateutils.h"
 
 /**
@@ -33,4 +35,39 @@ reg sign_or_zero_extend(uint32_t operand, byte size_in_bits, bool type_of_extens
   long int extended = (operand ^ mask) - mask;
 
   return extended;
+}
+
+/**
+ * Retrieves the bits within the given range of the input.
+ *
+ * @param input The number that the bits are to be extracted from.
+ * @param start The beginning of the range of bits to extract (counting from 0).
+ * @param end The end of the range of bits to extact.
+ * @return The extracted bits from the input.
+ */
+reg retrieve_bits(reg input, reg start, reg end) {
+  reg mask = 0;
+  for (int i = start; i <= end; i++) {
+    mask = mask | (reg) 1 << i;
+  }
+
+  return (input & mask) >> start;
+}
+
+/**
+ * Set bits within the range provided within the input to to the given value.
+ *
+ * @param input The number that the bits are to be inserted into.
+ * @param start The beginning where to insert the bits within the number.
+ * @param end The end of where to insert the bits within the number.
+ * @param value The value to be inserted into the given input.
+ * @return The input with the value inserted into the appropriate bit positions.
+ */
+reg set_bits(reg input, reg start, reg end, reg value) {
+  reg mask = 0;
+  for (int i = start; i <= end; i++) {
+    mask = mask | (reg) 1 << i;
+  }
+
+  return (input & ~mask) | (value << start);
 }
