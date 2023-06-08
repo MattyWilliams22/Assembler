@@ -45,8 +45,7 @@ operand *make_operand(operand_type type) {
   operand *new = malloc(sizeof(operand_type) + sizeof(char*));
   assert (new != NULL);
   new->type = type;
-  int length = strlen(word);
-  new->word = malloc(sizeof(char) * length);
+  new->word = malloc(sizeof(char) * 15);
   return new;
 }
 
