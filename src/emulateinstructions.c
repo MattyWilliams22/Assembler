@@ -14,24 +14,24 @@ extern state STATE;
  */
 void data_processing_immediate(instruction instr) {
   // Extract bit 31
-  byte sf = (instr >> 31) & 0x1;
+  byte sf = retrieve_bits(instr, 31, 31);
   // Extract bits 30-29
-  byte opc = (instr >> 29) & 0x3;
+  byte opc = retrieve_bits(instr, 29, 30);
   // Extract bits 25-23
-  byte opi = (instr >> 23) & 0x7;
+  byte opi = retrieve_bits(instr, 23, 25);
   // Extract bits 4-0
-  byte rd = instr & 0x1f;
+  byte rd = retrieve_bits(instr, 0, 4);
 
   reg result;
 
   // Arithmetic operations - check opi is 010
   if (opi == 0x2) {
     // Extract bit 22
-    byte sh = (instr >> 22) & 0x1;
+    byte sh = retrieve_bits(instr, 22, 22);
     // Extract bits 21-10
-    uint64_t imm12 = (instr >> 10) & 0xfff;
+    uint64_t imm12 = retrieve_bits(instr, 10, 21);
     // Extract bits 9-5
-    byte rn = (instr >> 5) & 0x1f;
+    byte rn = retrieve_bits(instr , 5, 9);
 
     uint64_t op = (sh ? (imm12 << 12) : imm12);
     reg reg_op = choose_access_mode(sf, STATE.registers[rn]);
@@ -67,9 +67,9 @@ void data_processing_immediate(instruction instr) {
   // Wide Move - check opi is 101
   else if (opi == 0x5) {
     // Extract bit 22-21
-    byte hw = (instr >> 21) & 0x3;
+    byte hw = retrieve_bits(instr, 21, 22);
     // Extract bits 20-5
-    uint64_t imm16 = (instr >> 5) & 0xffff;
+    uint64_t imm16 = retrieve_bits(instr, 5, 20);
     // Operand
     uint64_t operand = imm16 << (hw * 16);
 
@@ -110,28 +110,28 @@ void data_processing_immediate(instruction instr) {
  */
 void data_processing_register(instruction instr) {
   // Extract bit 31
-  byte sf = (instr >> 31) & 0x1;
+  byte sf = retrieve_bits(instr, 31, 31);
   // Extract bits 30-29
-  byte opc = (instr >> 29) & 0x3;
+  byte opc = retrieve_bits(instr, 29, 30);
   // Extract bit 28
-  byte M = (instr >> 28) & 0x1;
+  byte M = retrieve_bits(instr, 28, 28);
   // Extract bits 24-21
-  byte opr = (instr >> 21) & 0xf;
+  byte opr = retrieve_bits(instr, 21, 24);
   // Extract bits 20-16
-  byte rm = (instr >> 16) & 0x1f;
+  byte rm = retrieve_bits(instr, 16, 20);
   // Extract bits 15-10
-  byte operand = (instr >> 10) & 0x3f;
+  byte operand = retrieve_bits(instr, 10, 15);
   // Extract bits 9-5
-  byte rn = (instr >> 5) & 0x1f;
+  byte rn = retrieve_bits(instr, 5, 9);
   // Extract bits 4-0
-  byte rd = instr & 0x1f;
+  byte rd = retrieve_bits(instr, 0, 4);
 
   reg result = rn;
 
   // Logic and Arithmetic Instructions
   if (M == 0) {
     // Extract bits 23-22
-    byte shift_type = (instr >> 22) & 0x3;
+    byte shift_type = retrieve_bits(instr, 22, 23);
     reg op2 = choose_access_mode(sf, (rm == 31 ? 0 : STATE.registers[rm]));
   
     // Decide which type of shift needs to be performed
@@ -167,7 +167,7 @@ void data_processing_register(instruction instr) {
     // Logical Instructions
     if (((instr >> 24) & 0x1) == 0) {
       // Extract bit 21
-      bool N = (instr >> 21) & 0x1;
+      bool N = retrieve_bits(instr, 21, 21);
       
       long int op1 = choose_access_mode(sf, (rn == 31 ? 0 : STATE.registers[rn]));
       
@@ -254,9 +254,9 @@ void data_processing_register(instruction instr) {
   // Multiply Instructions
   if (M == 1 && opr == 0x8) {
     // Extract bit 15
-    bool x = (instr >> 15) & 0x1;
+    bool x = retrieve_bits(instr, 15, 15);
     // Extract bits 14-10
-    byte ra = (instr >> 10) & 0x1f;
+    byte ra = retrieve_bits(instr, 10, 14);
 
     uint64_t op = choose_access_mode(sf, (ra == 31 ? 0 : STATE.registers[ra]));
     uint64_t op1 = choose_access_mode(sf, (rn == 31 ? 0 : STATE.registers[rn]));
@@ -286,28 +286,28 @@ void data_processing_register(instruction instr) {
  */
 void single_data_transfer(instruction instr) {
   // Extract bit 31
-  byte load_lit = (instr >> 31) & 0x1;
+  byte load_lit = retrieve_bits(instr, 31, 31);
   // Extract bit 30
-  byte sf = (instr >> 30) & 0x1;
+  byte sf = retrieve_bits(instr, 30, 30);
   // Extract bit 24
-  byte U = (instr >> 24) & 0x1;
+  byte U = retrieve_bits(instr, 24, 24);
   // Extract bit 22
-  byte L = (instr >> 22) & 0x1;
+  byte L = retrieve_bits(instr, 22, 22);
   // Extract bits 15 to 10
-  byte reg_offset = (instr >> 10) & 0x3f;
+  byte reg_offset = retrieve_bits(instr, 10, 15);
   // Extract bit 11
-  byte I = (instr >> 11) & 0x1;
+  byte I = retrieve_bits(instr, 11, 11);
   // Extract bits 9 to 5
-  byte xn = (instr >> 5) & 0x1f;
+  byte xn = retrieve_bits(instr, 5, 9);
   // Extract bits 4 to 0
-  byte rt = instr  & 0x1f;
+  byte rt = retrieve_bits(instr, 0, 4);
 
   reg address;
 
   // Load Literal
   if (load_lit == 0) {
     // Extract bits 23 to 5
-    int simm19 = (instr >> 5) & 0x7ffff;
+    int simm19 = retrieve_bits(instr, 5, 23);
 
     // Sign extend to 64 bits
     int extended = sign_or_zero_extend(simm19, 19, 1);
@@ -317,7 +317,7 @@ void single_data_transfer(instruction instr) {
     // Unsigned Immediate Offset
     if (U == 1) {
       // Extract bits 21 to 10
-      int imm12 = (instr >> 10) & 0xfff;
+      int imm12 = retrieve_bits(instr, 10, 21);
 
       // Zero extend to 64 bits
       int extended = sign_or_zero_extend(imm12, 12, 0);
@@ -326,13 +326,13 @@ void single_data_transfer(instruction instr) {
     // Register Offset
     } else if (reg_offset == 0x1a) {
       // Extract bits 20 to 16
-      byte xm = (instr >> 16) & 0x1f;
+      byte xm = retrieve_bits(instr, 16, 20);
 
       address = STATE.registers[xn] + STATE.registers[xm];
     // Pre-Indexed
     } else if (I == 1) {
       // Extract bits 20 to 12
-      int simm9 = (instr >> 12) & 0x1ff;
+      int simm9 = retrieve_bits(instr, 12, 20);
 
       // Sign extend to 64 bits
       int extended = sign_or_zero_extend(simm9, 9, 1);
@@ -342,7 +342,7 @@ void single_data_transfer(instruction instr) {
     // Post-Indexed
     } else if (I == 0) {
       // Extract bits 20 to 12
-      int simm9 = (instr >> 12) & 0x1ff;
+      int simm9 = retrieve_bits(instr, 12, 20);
 
       // Sign extend to 64 bits
       int extended = sign_or_zero_extend(simm9, 9, 1);
@@ -450,12 +450,12 @@ void single_data_transfer(instruction instr) {
  */
 void branch_instructions(instruction instr) {
   // Extract bits 31 to 26
-  byte sf = (instr >> 26) & 0x3f;
+  byte sf = retrieve_bits(instr, 26, 31);
   switch (sf) {
     // Unconditional
     case 0x5: {
       // Extract bits 25 to 0
-      int simm26 = instr & 0x3ffffff;
+      int simm26 = retrieve_bits(instr, 0, 25);
 
       // Sign extend to 64 bits
       int extended = sign_or_zero_extend(simm26, 26, 1);
@@ -466,20 +466,20 @@ void branch_instructions(instruction instr) {
     // Register
     case 0x35: {
       // Extract bits 9 to 5
-      byte xn = (instr >> 5) & 0x1f;
+      byte xn = retrieve_bits(instr, 5, 9);
       STATE.pc = STATE.registers[xn];
       break;
     }
     // Conditional
     case 0x15: {
       // Extract bits 23 to 5
-      int simm19 = (instr >> 5) & 0x7ffff;
+      int simm19 = retrieve_bits(instr, 5, 23);
 
       // Sign extend to 64 bits
       int extended = sign_or_zero_extend(simm19, 19, 1);
 
       // Extract bits 3 to 0
-      byte cond = instr & 0xf;
+      byte cond = retrieve_bits(instr, 0, 3);
       bool condition;
 
       switch (cond) {

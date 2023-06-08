@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "emulatesetup.h"
 #include "emulateinstructions.h"
+#include "emulateutils.h"
 
 state STATE;
 
@@ -39,7 +40,7 @@ void initialise_memory(void) {
  */
 funcptr decode(instruction instr) {
   // Extract bits 28 to 25
-  byte bits_28_to_25 = (instr >> 25) & 0xf;
+  byte bits_28_to_25 = retrieve_bits(instr, 25, 28);
 
   if (instr == NOOP) {
     return &nop;
