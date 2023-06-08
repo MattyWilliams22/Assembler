@@ -51,8 +51,8 @@ operand *make_operand(operand_type type, char* word) {
 }
 
 void free_operand(operand op) {
-  free(&op.word);
-  free(&op);
+  free(op->word);
+  free(op);
 }
 
 typedef struct {
@@ -73,7 +73,8 @@ void free_token_line(token_line line) {
   for (int i = 0; i < line.operand_count; i++) {
     free_operand(line.operands[i]);
   }
-  free(&line);
+  free(line->operands);
+  free(line);
 }
 
 typedef struct {
@@ -93,7 +94,8 @@ void free_token_array(token_array array) {
   for (int i = 0; i < array.line_count; i++) {
     free_token_line(array.token_lines[i]);
   }
-  free(&array);
+  free(array->token_lines);
+  free(array);
 }
 
 typedef uint32_t binary;
