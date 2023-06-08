@@ -71,7 +71,7 @@ token_line *make_token_line(opcode_name opcode, operand *operands, int op_count)
 
 void free_token_line(token_line *line) {
   for (int i = 0; i < line->operand_count; i++) {
-    free_operand(line->operands[i]);
+    free_operand(&line->operands[i]);
   }
   free(line->operands);
   free(line);
@@ -92,7 +92,7 @@ token_array *make_token_array(token_line *token_lines, int line_count) {
 
 void free_token_array(token_array *array) {
   for (int i = 0; i < array->line_count; i++) {
-    free_token_line(array->token_lines[i]);
+    free_token_line(&array->token_lines[i]);
   }
   free(array->token_lines);
   free(array);
