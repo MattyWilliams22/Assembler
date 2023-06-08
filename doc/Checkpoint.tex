@@ -4,7 +4,9 @@
 
 \begin{document}
 
-\title{ARM Checkpoint... }
+\title{
+    \vspace{-2cm}
+    ARM Project Checkpoint Report}
 \author{Dina Duong, Maciej Rytlewski, Kritik Pant, Matty Williams}
 
 \maketitle
@@ -14,27 +16,28 @@
 \subsection*{Task Allocation}
 
 \begin{itemize}
-    \item Kritik Pant: Memory initialisation, instruction processing, and data processing immediate and registers instructions.
-    \item Maciej Rytlewski: Single data transfer instructions and bug fixes.
-    \item Dina Duong: Branch instructions, bug fixes and report. 
-    \item Matty Williams: Suggested code improvements and moved on to Part 2 (Assembler).
+    \item Kritik Pant: Representing machine, memory initialisation, instruction processing, and data processing immediate and registers instructions. 
+    Then moved on to Part 2 (Assembler).
+    \item Maciej Rytlewski: Single data transfer instructions, bug fixes, code reduction.
+    \item Dina Duong: Branch instructions, bug fixes, code reduction and report. 
+    \item Matty Williams: Code optimization through function pointers and moved on to Part 2 (Assembler).
 \end{itemize}
 To coordinate our work, we made a separate branch in the Git Repository, where we experimented with the code. 
-After fixing all the errors, we pushed stable working versions to the master branch. 
-As the first part is sequential, the initial task was to decide how we want to implement the memory. 
-After the discussion, memory initialisation was assigned to Kritik. Once the memory was set up, we all started 
-implementing the instructions, dividing the workload equally between the group members. 
-After completing the full functionality, Dina and Maciej focused on bug fixing while Kritik and Matty moved on to Part 2.
+We tried various approaches to representing memory and the state of the machine before eventually settling on an array for memory and a 
+struct for the state of the machine containing register values, PSTATE, and the memory array. 
+After fixing some initial errors and testing our representation, we pushed the code to the master branch.
+After that, we divided the task of implementing instructions equally between the group members (stated above) and built some useful utilities to reduce code duplication.
+When the emulator could pass some basic test cases, Dina and Maciej focused on bug fixing while Kritik and Matty moved on to Part 2.
 
 \subsection*{Group Evaluation}
-Overall, our group has been working well together. Since Part 1 involved a sequential implementation of the emulator, 
-there were limited opportunities for parallel work. However, the division of tasks among group members helped us progress efficiently.
-Regular communication was maintained through discussions, ensuring everyone was aware of the progress and tasks assigned to each member.
+Overall, our group has been working well together with everyone doing a fair and equal amount of work. We found Part 1 to be quite sequential so there were limited 
+opportunities for parallel work. However, the division of tasks among group members helped us progress efficiently. Regular communication was maintained through 
+discussions, ensuring everyone was aware of the progress and tasks assigned to each member.
 \newline
-As we progress, we anticipate the need for better task coordination and clearer communication regarding individual responsibilities. 
-As the complexity of the project increases, we may need to allocate tasks based on members' expertise and consider potential 
-dependencies between different components. Regular progress updates and meetings will be crucial to ensure 
-everyone is on the same page and to address any challenges promptly.
+As we progress to Part 2, we expect to have more opportunities for parallel work. However, this will require better coordination and communication between group members. 
+We will need to ensure that everyone is aware of the progress and tasks assigned to each member and that we are not duplicating work. We aim to hold 
+regular progress updates and meetings to ensure everyone is on the same page and to address any challenges promptly. We will also do code reviews to ensure the code 
+is clean and well-structured.
 
 \section{Implementation Strategies}
 
@@ -46,23 +49,32 @@ We used a modular approach by splitting the code into separate files. Our file s
         We implemented memory as an array and used structs for modelling PSTATE and state of the memory and registers.
     \item Instructions File: Each instruction was implemented as a separate function within this file, allowing for easy 
         modification and addition of new instructions.
+    \item IO File: This file handled reading and writing to files.
     \item Utilities File: We created a utilities file containing commonly used functions, such as 32-bit and 64-bit mode handling 
         and sign extension. These utility functions were reusable across various instructions and improved code organisation.
     \item Main File: The entry point for running the emulator.
 \end{itemize}
 
 \subsection*{Reusability for Assembler}
-In our opinion, some of the utils functions could be used in the Assembler. As the Emulator is reading binary and executing it 
-and Assembler is translating Assembly into binary, we do not think Emulator code can be directly reused for the Assembler.
+In the Assembler, we expect to reuse some of the utilities and IO which we used in the Emulator. 
+
+\begin{itemize}
+    \item read\_from\_file: We should be able to use the function almost exactly to read the assembly file before tokenizing it.
+    \item write\_to\_file: Similarly, we should be able to use a variation of write\_to\_file to write the binary output file of the assembler.
+    \item set\_bits: The set bits function generates a mask and is used to set bits in registers in the emulator. We should be able to adapt this slightly to set bits in binary lines in the assembler output file.
+\end{itemize}
 
 \subsection*{Future Challenges}
 \begin{itemize}
-    \item Splitting Up the Work: As mentioned earlier, the project is somewhat sequential. 
-    Making it hard to parallelise the work since certain tasks need to be completed before moving on to others. 
-    To address this, we have been working collaboratively and there has been a lot of communication, making sure we let each other know
-    what we have been doing and on what stage of implementation we are.
-    \item Reducing and Cleaning Up the Code: As the code length increases, it has been hard to manage and maintain it. To mitigate this,
-    we have been removing duplicated and unused code. We have been having code reviews, during which we indentified areas of improvement.
+    \item Splitting Up Work: As mentioned earlier, the project is somewhat sequential, making it hard to parallelise work since certain tasks depend on others to be completed. 
+    To address this, we have maintained good communication and made good use of git branches and commit messages to help us keep track of each other's progress. 
+    We aim to continue this approach as we progress to Part 2.
+    \item Reducing Code Duplication: As code length increases, we have seen how it can be challenging to manage and maintain it. 
+    To mitigate this, we have adopted an iterative approach of working; building a function and then refactoring it to reduce code duplication. 
+    We have also held code reviews to identify areas of improvements which has helped us clean up the code.
+    \item Identifying Bugs: We are conscious that the assembler involves many different parts such as the file reader, tokenizer, parser, and binary generator. 
+    As such we imagine that bug fixing will become more challenging. We aim to address this by holding code reviews to identify each other's mistakes as well as use debuggers 
+    such as GDB to help identify bugs and Valgrind to check for memory leaks.
 \end{itemize}
 
 \end{document}
