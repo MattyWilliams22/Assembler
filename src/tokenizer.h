@@ -2,6 +2,7 @@
 #define TOKENIZER_H
 
 #include "assembleutils.h"
+#include <stdio.h>
 
 typedef void (*func_ptr_type)(operand*, int);
 

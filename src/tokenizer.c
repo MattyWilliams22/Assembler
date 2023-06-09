@@ -388,14 +388,14 @@ token_array read_assembly(FILE* fp, int nlines) {
   char* line = NULL;
   size_t len = 0;
   int read;
-  token_array array = make_token_array(nlines);
+  token_array *array = make_token_array(nlines);
   array->line_count = 0;
 
-  if (token_array.token_lines == NULL) {
+  if (array->token_lines == NULL) {
     // Handle memory allocation failure
     perror("Memory allocation failed");
     fclose(fp);
-    return token_array;
+    return *array;
   }
 
   while ((read = getline(&line, &len, fp)) != -1) {
@@ -408,5 +408,5 @@ token_array read_assembly(FILE* fp, int nlines) {
   }
 
   fclose(fp);
-  return array;
+  return *array;
 }
