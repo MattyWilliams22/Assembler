@@ -11,8 +11,7 @@ build-all:
   before_script:
     - apt-get update -y && apt-get install make build-essential -y
   script:
-    - cd src/emulator; make clean all
-    - cd ../assembler; make clean all
+    - cd src; make clean all
 
 # test the emulator
 test-all-emulator:
@@ -30,15 +29,14 @@ test-all-emulator:
     
   script:
     # build src
-    - cd src/emulator
+    - cd src
     - make clean all
-    - cd ..
     # run test suite
     - cd ../vendor/armv8_testsuite/armv8_testsuite
     - source ./.venv/bin/activate
     # To see logs, replace -p below with -v or even -pv
     # We save logs to a file so we can check if there were any fails
-    - ./run -E -e ../../../src/emulator/emulate -a ../../../src/assembler/assemble -pv 2>&1 | tee emulate.log
+    - ./run -E -e ../../../src/emulate -a ../../../src/assemble -pv 2>&1 | tee emulate.log
     - echo "grep -q -e 'INCORRECT' -e 'FAIL' emulate.log && exit 1 || true" | bash
 
 # test the assembler in parallel with emulator
@@ -57,14 +55,13 @@ test-all-assembler:
     
   script:
     # build src
-    - cd src/assembler
+    - cd src
     - make clean all
-    - cd ..
     # run test suite
     - cd ../vendor/armv8_testsuite/armv8_testsuite
     - source ./.venv/bin/activate
     # runs just the assembler
     # To see logs, replace -p below with -v or even -pv
     # We save logs to a file so we can check if there were any fails
-    - ./run -A -e ../../../src/emulator/emulate -a ../../../src/assembler/assemble -pv 2>&1 | tee assemble.log
+    - ./run -A -e ../../../src/emulate -a ../../../src/assemble -pv 2>&1 | tee assemble.log
     - echo "grep -q -e 'INCORRECT' -e 'FAIL' assemble.log && exit 1 || true" | bash
