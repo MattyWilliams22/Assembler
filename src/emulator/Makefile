@@ -7,11 +7,10 @@ CFLAGS  ?= -std=c17 -g\
 
 .PHONY: all clean
 
-all: assemble emulate
+all: emulate
 
-assemble: assemble.o
 emulate: emulate.o
 
 clean:
-	$(RM) *.o assemble emulate
+	$(RM) *.o emulate
 	
