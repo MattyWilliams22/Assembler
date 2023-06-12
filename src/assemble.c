@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "assemble.h"
@@ -453,9 +454,12 @@ int main(int argc, char **argv) {
 
   // Get number of lines in input file
   int nlines = count_lines(input);
+  rewind(input);
 
   // Convert lines of file to an array of token_lines
   token_array token_array = read_assembly(input, nlines);
+
+  fclose(input);
 
   // Convert token_lines to binary_lines
   binary binary_lines[token_array.line_count];

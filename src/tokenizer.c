@@ -385,9 +385,7 @@ token_line process_line(char * line) {
 
 // Reads an assembly code file and processes each line into a token_line
 token_array read_assembly(FILE* fp, int nlines) {
-  char* line = NULL;
-  size_t len = 0;
-  int read;
+  char line[100];
   token_array *array = make_token_array(nlines);
   array->line_count = 0;
 
@@ -398,7 +396,7 @@ token_array read_assembly(FILE* fp, int nlines) {
     return *array;
   }
 
-  while ((read = getline(&line, &len, fp)) != -1) {
+  while ((fgets(line, sizeof(line), fp)) != NULL) {
     token_line current_line = process_line(line);
     if (current_line.opcode != UNRECOGNISED_OPCODE) {
       array->token_lines[array->line_count] = current_line;
