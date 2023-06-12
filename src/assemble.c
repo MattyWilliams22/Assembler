@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "assemble.h"
-#include "assembleutils.h"
-#include "symbolTable.h"
 #include "tokenizer.h"
 
 #define HALT 0x8a000000
