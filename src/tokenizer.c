@@ -6,7 +6,7 @@
 #include "symbolTable.h"
 
 int line_count;
-Symbol_Table *labelTable;
+Symbol_Table *label_table;
 
 // get_types_... functions get the types of every operand in the line
 // They are grouped by operand pattern as seen in table 2
@@ -207,7 +207,7 @@ void get_types_b(operand *operands, int op_count) {
   } else {
     // <label>
     operands[0].type = IMM;
-    add_dependency(labelTable, operands[0].word, operands[0], line_count);
+    add_dependency(label_table, operands[0].word, operands[0], line_count);
   }
 }
 
@@ -220,7 +220,7 @@ void get_types_bcond(operand *operands, int op_count) {
   } else {
     // <cond>, <label>
     operands[1].type = IMM;
-    add_dependency(labelTable, operands[1].word, operands[1], line_count);
+    add_dependency(label_table, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -267,7 +267,7 @@ void get_types_ldr(operand *operands, int op_count) {
   } else {
     // <Rt>, <label>
     operands[1].type = IMM;
-    add_dependency(labelTable, operands[1].word, operands[1], line_count);
+    add_dependency(label_table, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -280,6 +280,7 @@ void get_types_null(operand *operands, int op_count) {
   // Do nothing
 }
 
+// Checks if the instruction is the halt instruction (and x0, x0, x0)
 bool is_halt(opcode_name opcode, operand *operands, int op_count) {
   if (opcode == AND && op_count == 3) {
     if (strcmp(operands[0].word, "x0") == 0 
@@ -291,7 +292,7 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
   return false;
 }
 
-// Converts a string into a token_line
+// Converts a line of text into a token_line
 token_line process_line(char line[]) {
   const char s[] = " "; 
   const char d[] = ",";
@@ -302,9 +303,14 @@ token_line process_line(char line[]) {
   while (instr_str != NULL) {
     strings[string_count] = instr_str;
     string_count++;
-
     instr_str = strtok(NULL, d);
   }
+
+  // The strings need processing
+  // Could be:
+  // ["x0", " x0", " x0"]
+  // or ["x2", "lsl #12"]
+  // or ["x1", " [x3", "#5]!"]
 
   // Operand
   int operand_count = string_count - 1;
@@ -338,7 +344,7 @@ token_line process_line(char line[]) {
     if (instr_str[length - 1] == ':') {
       opcode = LABEL_OPCODE;
       get_types = &get_types_null;
-      add_address(labelTable, current_operands[1].word, line_count);
+      add_address(label_table, current_operands[1].word, line_count);
     }
   }
 
@@ -360,19 +366,17 @@ token_line process_line(char line[]) {
   return current_line;
 }
 
-// Reads an assembly code file and processes each line into a token_line
+// Reads an assembly code file and processes the lines into a token_array
 token_array read_assembly(FILE* fp, int nlines) {
   char line[100];
   token_array *array = make_token_array(nlines);
-  array->line_count = 0;
-
-  if (array->token_lines == NULL) {
-    // Handle memory allocation failure
-    perror("Memory allocation failed");
+  if (array == NULL) {
+    perror("Memory allocation of array failed in read_assembly");
     fclose(fp);
-    return *array;
+    exit(EXIT_FAILURE);
   }
-
+  array->line_count = 0;
+  label_table = malloc(sizeof(Symbol_Table));
   while ((fgets(line, sizeof(line), fp)) != NULL) {
     // Remove trailing newline if there is one
     if (line[strlen(line) - 1] == '\n') {
@@ -390,7 +394,7 @@ token_array read_assembly(FILE* fp, int nlines) {
     }
     
   }
-
+  free_table(label_table);
   fclose(fp);
   return *array;
 }

@@ -7,11 +7,7 @@
 
 // Adding to Symbol Table
 void add_to_table(Symbol_Table *table, Key key, Value value) {
-  Node_t *new_node = (Node_t *)malloc(sizeof(Node_t));
-  new_node->label = key;
-  new_node->address = value;
-  new_node->next = NULL;
-
+  Node_t *new_node = make_list_node(key, value, 0, NULL);
   if (table->head == NULL) {
     table->head = new_node;
   } else {
@@ -25,6 +21,7 @@ void add_to_table(Symbol_Table *table, Key key, Value value) {
 
 // Check existence of key in Symbol Table
 bool exists_in_table(Symbol_Table *table, Key key) {
+  if (table == NULL) return false;
   Node_t *current = table->head;
   while (current != NULL) {
     if (strcmp(current->label, key) == 0) {
@@ -56,14 +53,15 @@ void remove_from_table(Symbol_Table *table, Key key) {
 }
 
 // Finding in Symbol Table
-Node_t find_in_table(Symbol_Table *table, Key key) {
+Node_t *find_in_table(Symbol_Table *table, Key key) {
   Node_t *current = table->head;
   while (current != NULL) {
     if (strcmp(current->label, key) == 0) {
-      return *current;
+      return current;
     }
     current = current->next;
   }
+  return NULL;
 }
 
 // Freeing Symbol Table
@@ -72,10 +70,11 @@ void free_table(Symbol_Table *table) {
   Node_t *next = NULL;
   while (current != NULL) {
     next = current->next;
-    free(current);
+    free_list_node(current);
     current = next;
   }
   table->head = NULL;
+  free(table);
 }
 
 // Sets address of a single dependency
@@ -90,26 +89,50 @@ void set_addresses(Symbol_Table *table, Node_t node) {
   }
 }
 
+// Returns pointer to a new Node_t with the given values
+Node_t *make_list_node(Key label, Value address, int no_dependencies, Node_t *next) {
+  Node_t *new_node = malloc(sizeof(*new_node));
+  if (new_node == NULL) {
+    perror("Error allocating memory to new_node in make_list_node");
+    return NULL;
+  }
+  new_node->label = label;
+  new_node->address = address;
+  new_node->no_dependencies = no_dependencies;
+  new_node->next = next;
+  new_node->dependencies = malloc(sizeof(dependency) * no_dependencies);
+  if (new_node->dependencies == NULL) {
+    perror("Error allocating memory to new_node->dependencies in make_list_node");
+    return NULL;
+  }
+  return new_node;
+}
+
+void free_list_node(Node_t *node) {
+  free(node->dependencies);
+  free(node);
+}
+
 // Add dependency to symbol table
 void add_dependency(Symbol_Table *table, Key label, operand op, int line_no) {
   dependency d;
   d.operand = op;
   d.line = line_no;
   if (exists_in_table(table, label)) {
-    Node_t node = find_in_table(table, label);
-    node.dependencies[node.no_dependencies] = d;
-    node.no_dependencies++;
-    if (node.address != NULL) {
-      set_address(node, (node.no_dependencies - 1));
+    Node_t *node = find_in_table(table, label);
+    node->dependencies = realloc(node->dependencies, (node->no_dependencies + 1) * sizeof(dependency));
+    node->dependencies[node->no_dependencies] = d;
+    node->no_dependencies++;
+    if (node->address != -1) {
+      set_address(*node, (node->no_dependencies - 1));
     }
   } else {
-    Node_t *new_node = (Node_t *)malloc(sizeof(Node_t));
-    new_node->label = label;
-    new_node->address = NULL;
+    Node_t *new_node = make_list_node(label, -1, 1, NULL);
+    if (new_node == NULL) {
+      perror("Error allocating memory to new_node in add_dependency");
+      exit(EXIT_FAILURE);
+    }
     new_node->dependencies[0] = d;
-    new_node->no_dependencies = 1;
-    new_node->next = NULL;
-
     if (table->head == NULL) {
       table->head = new_node;
     } else {
@@ -129,9 +152,9 @@ void add_address(Symbol_Table *table, Key label, int line_no) {
   label[length - 1] = '\0';
 
   if (exists_in_table(table, label)) {
-    Node_t node = find_in_table(table, label);
-    node.address = line_no;
-    set_addresses(table, node);
+    Node_t *node = find_in_table(table, label);
+    node->address = line_no;
+    set_addresses(table, *node);
   } else {
     Node_t *new_node = (Node_t *)malloc(sizeof(Node_t));
     new_node->label = label;

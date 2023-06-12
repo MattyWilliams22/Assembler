@@ -1,6 +1,7 @@
 #include "assembleutils.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 operand *make_operand(operand_type type) {
   operand *new = malloc(sizeof(operand_type) + sizeof(char*));
@@ -32,17 +33,21 @@ void free_token_line(token_line *line) {
 }
 
 token_array *make_token_array(int line_count) {
-  token_array *new = malloc(sizeof(token_line*) + sizeof(int));
-  assert (new != NULL);
-  new->token_lines = malloc((sizeof(operand_type) + sizeof(char*)) * 6 * line_count);
-  new->line_count = 0;
+  token_array *new = malloc(sizeof(token_array));
+  if (new == NULL) {
+    perror("Failed to assign memory to new in make_token_array");
+    exit(EXIT_FAILURE);
+  }
+  new->token_lines = malloc(sizeof(token_line) * line_count);
+  if (new->token_lines == NULL) {
+    perror("Failed to assign memory to new->token_lines in make_token_array");
+    exit(EXIT_FAILURE);
+  }
+  new->line_count = line_count;
   return new;
 }
 
 void free_token_array(token_array *array) {
-  for (int i = 0; i < array->line_count; i++) {
-    free_token_line(&array->token_lines[i]);
-  }
   free(array->token_lines);
   free(array);
 }
