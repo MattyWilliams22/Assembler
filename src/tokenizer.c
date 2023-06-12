@@ -292,51 +292,29 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 }
 
 // Converts a string into a token_line
-token_line process_line(char * line) {
+token_line process_line(char line[]) {
   const char s[] = " "; 
-  const char d[] = ".";
-  char * instr_str = strtok(line, s);
-  instr_str = strtok(instr_str, d);
+  const char d[] = ",";
+  char *instr_str = strtok(line, s);
   int string_count = 0;
   char *strings[10];
 
-  for (char *q = strtok(NULL, d); q != NULL; q = strtok(NULL, d)) {
-    strcpy(strings[string_count], q);
+  while (instr_str != NULL) {
+    strings[string_count] = instr_str;
     string_count++;
-  }
-  
-  for (char *p = strtok(line, s); p != NULL; p = strtok(NULL, s)) {
-    strcpy(strings[string_count], p);
-    string_count++;
+
+    instr_str = strtok(NULL, d);
   }
 
-  char *sentence = malloc(string_count * 10 * sizeof(char));
-  for (int i = 0; i < string_count; i++) {
-    char *current_word = strings[i];  
-    int length = strlen(current_word);
-    strcat(sentence, current_word);
-    if (current_word[length] != ',') {
-      strcat(sentence, " ");
-    }
-  }
-
-  int word_count = 0;
-  char *words;
-  const char c[] = ",";
-
-  for (char *p = strtok(sentence, c); p != NULL; p = strtok(NULL, c)) {
-    strcpy(&words[word_count], p);
-    word_count++;
-  }
-
-  free(sentence);
+  // Operand
+  int operand_count = string_count - 1;
 
   func_ptr_type get_types;
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
 
   for (int i = 0; i < sizeof(instructionMappings) / sizeof(instructionMappings[0]); i++) {
-    if (strcmp(instr_str, instructionMappings[i].instruction) == 0) {
+    if (strcmp(strings[0], instructionMappings[i].instruction) == 0) {
       opcode = instructionMappings[i].opcode;
       get_types = instructionMappings[i].function;
       has_function = true;
@@ -344,16 +322,15 @@ token_line process_line(char * line) {
     }
   }
   
-
-  if (opcode == LDR && word_count != 2) {
+  if (opcode == LDR && operand_count != 2) {
     get_types = &get_types_str;
   }
 
-  operand *current_operands;
+  operand current_operands[operand_count];
   token_line current_line;
 
-  for (int i = 0; i < word_count; i++) {
-    current_operands[i].word = &words[i];
+  for (int i = 0; i < operand_count; i++) {
+    current_operands[i].word = strings[i + 1];
   }
 
   if (opcode == UNRECOGNISED_OPCODE) {
@@ -366,19 +343,19 @@ token_line process_line(char * line) {
   }
 
   if(opcode == AND) {
-    if(is_halt(opcode, current_operands, word_count)) {
+    if(is_halt(opcode, current_operands, operand_count)) {
       opcode = HALT;
       get_types = &get_types_null;
     }
   }
 
   if (has_function) {
-    get_types(current_operands, word_count);
+    get_types(current_operands, operand_count);
   }
 
   current_line.opcode = opcode;
   current_line.operands = current_operands;
-  current_line.operand_count = word_count;
+  current_line.operand_count = operand_count;
 
   return current_line;
 }
@@ -397,12 +374,21 @@ token_array read_assembly(FILE* fp, int nlines) {
   }
 
   while ((fgets(line, sizeof(line), fp)) != NULL) {
-    token_line current_line = process_line(line);
-    if (current_line.opcode != UNRECOGNISED_OPCODE) {
-      array->token_lines[array->line_count] = current_line;
-      alias(array->token_lines[array->line_count]);
-      array->line_count++;
+    // Remove trailing newline if there is one
+    if (line[strlen(line) - 1] == '\n') {
+      line[strlen(line) - 1] = '\0';
     }
+
+    if (strlen(line) != 0) {
+      token_line current_line = process_line(line);
+      
+      if (current_line.opcode != UNRECOGNISED_OPCODE) {
+        array->token_lines[array->line_count] = current_line;
+        alias(array->token_lines[array->line_count]);
+        array->line_count++;
+      }
+    }
+    
   }
 
   fclose(fp);
