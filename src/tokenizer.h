@@ -25,7 +25,7 @@ void get_types_nop(operand *operands, int op_count);
 void get_types_dir(operand *operands, int op_count);
 void get_types_null(operand *operands, int op_count);
 
-token_array read_assembly(FILE* fp, int nlines);
+token_line *read_assembly(FILE* fp, int nlines);
 
 typedef struct {
     const char* instruction;

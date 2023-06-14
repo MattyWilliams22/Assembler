@@ -389,12 +389,19 @@ binary assemble_line(token_line line) {
 // Counts the number of lines of text in the file given by fp
 int count_lines(FILE *fp) {
   int count = 0;
-  char c;
-  for (c = getc(fp); c != EOF; c = getc(fp)) {
-    if (c == '\n') { 
-      count = count + 1; 
+  char line[100];
+
+  while ((fgets(line, sizeof(line), fp)) != NULL) {
+    // Remove trailing newline if there is one
+    if (line[strlen(line) - 1] == '\n') {
+      line[strlen(line) - 1] = '\0';
+    }
+
+    if (strlen(line) != 0) {
+      count += 1;
     }
   }
+  
   return count;
 }
 
@@ -457,16 +464,13 @@ int main(int argc, char **argv) {
   rewind(input);
 
   // Convert lines of file to an array of token_lines
-  token_array token_array = read_assembly(input, nlines);
-
-  fclose(input);
+  token_line *token_lines = read_assembly(input, nlines);
 
   // Convert token_lines to binary_lines
-  binary binary_lines[token_array.line_count];
-  for (int i = 0; i < token_array.line_count; i++) {
-    binary_lines[i] = assemble_line(token_array.token_lines[i]);
+  binary binary_lines[nlines];
+  for (int i = 0; i < nlines; i++) {
+    binary_lines[i] = assemble_line(token_lines[i]);
   }
-
 
   FILE* output = fopen(argv[2], "wb+");
 	if (output == NULL) {
@@ -475,10 +479,10 @@ int main(int argc, char **argv) {
 	}
 
   // Writes binary_lines to output file
-  write_to_binary_file(output, binary_lines, token_array.line_count);
+  write_to_binary_file(output, binary_lines, nlines);
 
   // TEMPORARY Prints lines for testing
-  print_lines(token_array.token_lines, binary_lines, token_array.line_count);
+  print_lines(token_lines, binary_lines, nlines);
 
   return EXIT_SUCCESS;
 }

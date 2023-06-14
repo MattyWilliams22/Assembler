@@ -293,12 +293,13 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 }
 
 // Converts a line of text into a token_line
-token_line process_line(char line[]) {
+token_line *process_line(char line[]) {
   const char s[] = " "; 
   const char d[] = ",";
   char *instr_str = strtok(line, s);
   int string_count = 0;
   char *strings[10];
+  int char_count = 0;
 
   while (instr_str != NULL) {
     strings[string_count] = instr_str;
@@ -333,7 +334,6 @@ token_line process_line(char line[]) {
   }
 
   operand current_operands[operand_count];
-  token_line current_line;
 
   for (int i = 0; i < operand_count; i++) {
     current_operands[i].word = strings[i + 1];
@@ -359,24 +359,24 @@ token_line process_line(char line[]) {
     get_types(current_operands, operand_count);
   }
 
-  current_line.opcode = opcode;
-  current_line.operands = current_operands;
-  current_line.operand_count = operand_count;
+  operand *operands = malloc(operand_count * sizeof(operand));
 
-  return current_line;
+  for (int i = 0; i < operand_count; i++) {
+    operands[i] = *make_operand(current_operands[i].type, current_operands[i].word);
+  }
+
+  token_line *current_line = make_token_line(opcode, operand_count, operands);
+
+  return current_line; 
 }
 
 // Reads an assembly code file and processes the lines into a token_array
-token_array read_assembly(FILE* fp, int nlines) {
+token_line *read_assembly(FILE* fp, int nlines) {
   char line[100];
-  token_array *array = make_token_array(nlines);
-  if (array == NULL) {
-    perror("Memory allocation of array failed in read_assembly");
-    fclose(fp);
-    exit(EXIT_FAILURE);
-  }
-  array->line_count = 0;
+  token_line *lines = malloc(nlines * sizeof(token_line));
+  int line_count = 0;
   label_table = malloc(sizeof(Symbol_Table));
+  
   while ((fgets(line, sizeof(line), fp)) != NULL) {
     // Remove trailing newline if there is one
     if (line[strlen(line) - 1] == '\n') {
@@ -384,17 +384,16 @@ token_array read_assembly(FILE* fp, int nlines) {
     }
 
     if (strlen(line) != 0) {
-      token_line current_line = process_line(line);
+      token_line *current_line = process_line(line);
       
-      if (current_line.opcode != UNRECOGNISED_OPCODE) {
-        array->token_lines[array->line_count] = current_line;
-        alias(array->token_lines[array->line_count]);
-        array->line_count++;
+      if (current_line->opcode != UNRECOGNISED_OPCODE) {
+        lines[line_count] = *current_line;
+        alias(lines[line_count]);
+        line_count++;
       }
     }
-    
   }
   free_table(label_table);
   fclose(fp);
-  return *array;
+  return lines;
 }
