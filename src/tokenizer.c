@@ -217,8 +217,8 @@ void get_types_mul(operand *operands, int op_count) {
 }
 
 void get_types_b(operand *operands, int op_count) {
-  // <literal>      (label_OPERAND or imm)
-  if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
+  // <literal>      (IMM or imm)
+  if (operands[0].word[0] == '#') {
     // <imm>
     operands[0].type = IMM;
   } else {
@@ -231,7 +231,7 @@ void get_types_b(operand *operands, int op_count) {
 void get_types_bcond(operand *operands, int op_count) {
   // <cond>, <literal>
   operands[0].type = COND;
-  if (operands[1].word[0] == '0' && operands[1].word[1] == 'x') {
+  if (operands[1].word[0] == '#') {
     // <cond>, <imm>
     operands[1].type = IMM;
   } else {
@@ -278,7 +278,7 @@ void get_types_str(operand *operands, int op_count) {
 void get_types_ldr(operand *operands, int op_count) {
   // <Rt>, <literal>
   operands[0].type = REG;
-  if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
+  if (operands[0].word[0] == '#') {
     // <Rt>, <imm>
     operands[1].type = IMM;
   } else {
@@ -341,8 +341,24 @@ token_line *process_line(char *line) {
   // or ["x2", "lsl #12"]
   // or ["x1", " [x3", "#5]!"]
 
+  // b.cond case
+  if (string_count > 0) {
+    if (strlen(strings[0]) > 1) {
+      if (strings[0][1] == '.') {
+        strings[2] = strings[1];
+        strings[1] = strdup(strings[0] + 2);
+        strings[0] = "b.";
+        string_count++;
+      }
+    }
+  }
+
   // Operand
   int operand_count = string_count - 1;
+
+  for (int i = 0; i < string_count; i++) {
+    printf("String %d is: %s\n", i, strings[i]);
+  }
 
   func_ptr_type get_types;
   bool has_function = false;
