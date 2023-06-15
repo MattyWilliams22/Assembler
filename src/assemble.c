@@ -226,15 +226,16 @@ binary assemble_DP(token_line line) {
       // Set bit 24 as 1
       result = set_bits(result, 24, 24, 1);
 
-      if (line.operands[line.operand_count - 1].type == SHIFT) {
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
         // Set bits 23 to 22 as shift type
-        result = set_bits(result, 22, 23, convert_SHIFT(line.operands[2])); 
+        result = set_bits(result, 22, 23, convert_SHIFT(line.operands[line.operand_count - 2])); 
+        // Set bits 15 to 10 as shift amount
+        result = set_bits(result, 10, 15, get_shift_amount(line.operands[line.operand_count - 1]));      
       }
       
       // Set bit 21 as 0
       result = set_bits(result, 21, 21, 0);
-      // Set bits 15 to 10 as shift amount
-      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
+      
     } else if (line.opcode == MADD || line.opcode == MSUB) {
       // Multiply
 
@@ -255,14 +256,20 @@ binary assemble_DP(token_line line) {
       result = set_bits(result, 28, 28, 0);
       // Set bit 24 as 1
       result = set_bits(result, 24, 24, 0);
+
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
+        // Set bits 23 to 22 as shift type
+        result = set_bits(result, 22, 23, convert_SHIFT(line.operands[line.operand_count - 2])); 
+        // Set bits 15 to 10 as shift amount
+        result = set_bits(result, 10, 15, get_shift_amount(line.operands[line.operand_count - 1]));      
+      }
+
       // Set bits 23 to 22 as shift type
       result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
       // Set bit 21 as N
       if (line.opcode == BIC || line.opcode == ORN || line.opcode == EON || line.opcode == BICS) {
         result = set_bits(result, 21, 21, 1);
       }
-      // Set bits 15 to 10 as shift amount
-      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
     }
   }
   return result;
