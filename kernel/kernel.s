@@ -21,7 +21,7 @@ main:
     b main
 
 wait:
-    movz xd, #0xffff, lsl #48
+    movz r0, #0xffff, lsl #48
     loop:
         sub r0, #0x1; subtract 1
         cmp r0, #0x0; check if it's zero
@@ -61,7 +61,7 @@ SetLEDState:
 
 MailboxWrite:
     add r0, r1;
-    ldr r2, 0x3f00b880; mailbox address
+    ldr r2, #0x3f00b880; mailbox address
 
     ldr lr, pc
     b wait_write
@@ -75,7 +75,7 @@ wait_write:
     b.ne wait_write; keep checking mailbox until it's not full
 
 MailboxRead:
-    ldr r1, 0x3f00b880; mailbox address
+    ldr r1, #0x3f00b880; mailbox address
 
     ldr lr, pc
     b wait_read
