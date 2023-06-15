@@ -1,17 +1,22 @@
 _start:
-    movk sp, 0x8000; set the stack pointer
+    movk pc, 0x8000; set the program counter
     b main
 
 main:
-    bl wait
+    ldr lr, pc
+    b wait
     
     movk r0, #0x1; move 1 to first register
-    bl SetLEDState
+    ldr lr, pc
+    b SetLEDState
 
-    bl wait
+    ldr lr, pc
+    b wait
 
     movk r0, #0x0; move 0 to first register
-    bl SetLEDState
+
+    ldr lr, pc
+    b SetLEDState
 
     b main
 
@@ -20,7 +25,7 @@ wait:
     loop:
         sub r0, #0x1; subtract 1
         cmp r0, #0x0; check if it's zero
-        bne loop; if not loop back and keep subtracting
+        b.ne loop; if not loop back and keep subtracting
     mov pc, lr
 
 BufferInfo:
@@ -37,7 +42,7 @@ BufferInfoEnd:
 SetLEDState:
     push {lr}; save the address the function should return to
     mov r2, r0; move state(r0) into temp register
-    ldr r0, BufferInfo; load r0 with address of buffer info
+    ldr r0, BufferInfo; load r0 with buffer info
     movk r3, #0x0
     str r3, [r0, #0x4];reset request code
     str r3, [r0, #0x10]; reset request code
@@ -45,10 +50,12 @@ SetLEDState:
     str r3, [r0, 0x14]; reset pin number
     str r2, [r0, #0x18]; 
     movk r1, #0x8; set the channel to write to mailbox
-    bl MailboxWrite; write a message to mailbox
+    ldr lr, pc
+    b MailboxWrite; write a message to mailbox
 
     movk r0, #0x8
-    bl MailboxRead; read a message from mailbox
+    ldr lr, pc
+    b MailboxRead; read a message from mailbox
 
     pop {pc}; pop saved address into program counter
 
@@ -56,7 +63,8 @@ MailboxWrite:
     add r0, r1;
     ldr r2, 0x3f00b880; mailbox address
 
-    bl wait_write
+    ldr lr, pc
+    b wait_write
 
     str r0, [r2, #0x20]; send message to GPU
     mov pc, lr; return from the function
@@ -69,7 +77,8 @@ wait_write:
 MailboxRead:
     ldr r1, 0x3f00b880; mailbox address
 
-    bl wait_read
+    ldr lr, pc
+    b wait_read
 
     mov r0, r2; move the mail's address to the function return
     mov pc, lr; return from the function
@@ -77,10 +86,10 @@ MailboxRead:
 wait_read:
     ldr r2, [r1, #0x18]; load the status register
     tst r2, #0x40000000; check the empty flag
-    bne wait_read; keep checking until mailbox is not empty
+    b.ne wait_read; keep checking until mailbox is not empty
 
     ldr r2, [r1]; load adress of the response
     add r3, r2, #0b1111; extract channel
-    teq r3, r0; test if the same channel
+    eor r4, r3, r0; test if the same channel
 
     b.ne wait_read; keep checking for message we are interested in
