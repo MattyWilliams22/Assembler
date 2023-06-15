@@ -59,6 +59,11 @@ SetLEDState:
 
     pop {pc}; pop saved address into program counter
 
+wait_write:
+    ldr r3, [r2, #0x38]; load the status of write register
+    tst r3, #0x80000000; check the full flag
+    b.ne wait_write; keep checking mailbox until it's not full
+
 MailboxWrite:
     add r0, r1;
     ldr r2, #0x3f00b880; mailbox address
@@ -67,20 +72,6 @@ MailboxWrite:
     b wait_write
 
     str r0, [r2, #0x20]; send message to GPU
-    mov pc, lr; return from the function
-
-wait_write:
-    ldr r3, [r2, #0x38]; load the status of write register
-    tst r3, #0x80000000; check the full flag
-    b.ne wait_write; keep checking mailbox until it's not full
-
-MailboxRead:
-    ldr r1, #0x3f00b880; mailbox address
-
-    ldr lr, pc
-    b wait_read
-
-    mov r0, r2; move the mail's address to the function return
     mov pc, lr; return from the function
 
 wait_read:
@@ -93,3 +84,12 @@ wait_read:
     eor r4, r3, r0; test if the same channel
 
     b.ne wait_read; keep checking for message we are interested in
+
+MailboxRead:
+    ldr r1, #0x3f00b880; mailbox address
+
+    ldr lr, pc
+    b wait_read
+
+    mov r0, r2; move the mail's address to the function return
+    mov pc, lr; return from the function
