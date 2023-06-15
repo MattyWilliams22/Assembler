@@ -5,6 +5,8 @@
 #include <termios.h>
 #include <fcntl.h>
 
+
+#define TICKDELAY 100000.0
 #define WIDTH 20
 #define HEIGHT 20
 #define UP 'w'
@@ -13,11 +15,21 @@
 #define RIGHT 'd'
 
 int score;
+int highscore;
 int gameover;
 int x, y, fruitX, fruitY, flag;
 
 int tailX[100], tailY[100];
 int nTail;
+
+double get_tick_speed() {
+    double rate = 0.9;
+    double multiplier = 1.0;
+    for (int i = 0; i < nTail; i++) {
+        multiplier *= rate;
+    }
+    return TICKDELAY * multiplier + 50000;
+}
 
 int keyboard_event()
 {
@@ -55,11 +67,19 @@ void setup()
     fruitX = rand() % WIDTH;
     fruitY = rand() % HEIGHT;
     score = 0;
+    nTail = 0;
+    flag = -1;
 }
 
 void draw()
 {
     system("clear");
+    if (nTail > 0) {
+        printf("Score: %d\n", score);
+    } else {
+        printf("Welcome to snake!\n");
+    }
+    
     int i, j;
     for (i = 0; i < WIDTH + 2; i++)
         printf("#");
@@ -98,7 +118,10 @@ void draw()
     for (i = 0; i < WIDTH + 2; i++)
         printf("#");
     printf("\n");
-    printf("Score: %d", score);
+
+    if (nTail == 0) {
+        printf("Use WASD or Arrow Keys to move\n");
+    }
 }
 
 void input()
@@ -106,23 +129,21 @@ void input()
     if (keyboard_event())
     {
         char key = getchar();
-        switch (key)
-        {
-        case UP:
+        int arrow = 0;
+        if (key == 27) {
+            getchar();
+            arrow = getchar();
+        }
+        if ((key == UP || arrow == 65) && flag != 2) {
             flag = 1;
-            break;
-        case DOWN:
+        } else if ((key == DOWN || arrow == 66) && flag != 1) {
             flag = 2;
-            break;
-        case LEFT:
+        } else if ((key == LEFT || arrow == 68) && flag != 4) {
             flag = 3;
-            break;
-        case RIGHT:
+        } else if ((key == RIGHT || arrow == 67) && flag != 3) {
             flag = 4;
-            break;
-        case 'x':
+        } else if (key == 'x') {
             gameover = 1;
-            break;
         }
     }
 }
@@ -160,8 +181,16 @@ void logic()
     default:
         break;
     }
-    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
-        gameover = 1;
+    if (x == -1) {
+        x = WIDTH - 1;
+    } else if (x == WIDTH) {
+        x = 0;
+    }
+    if (y == -1) {
+        y = HEIGHT - 1;
+    } else if (y == HEIGHT) {
+        y = 0;
+    }
     for (int i = 0; i < nTail; i++)
     {
         if (tailX[i] == x && tailY[i] == y)
@@ -173,25 +202,53 @@ void logic()
     if (x == fruitX && y == fruitY)
     {
         score += 10;
-        fruitX = rand() % WIDTH;
-        fruitY = rand() % HEIGHT;
+        int touchesSnake;
+        do {
+            touchesSnake = 0;
+            fruitX = rand() % WIDTH;
+            fruitY = rand() % HEIGHT;
+            for (int i = 0; i < nTail; i++) {
+                if (fruitX == tailX[i] && fruitY == tailY[i]) {
+                    touchesSnake = 1;
+                }
+            }
+        } while (touchesSnake);
+        draw();
         nTail++;
+    } else {
+        draw();
     }
 }
 
 int main()
 {
-    srand(time(0));
-
-    setup();
-    while (!gameover)
-    {
+    int exitProgram = 0;
+    while (!exitProgram) {
+        srand(time(0));
+        setup();
         draw();
-        input();
-        logic();
-        usleep(100000); // Delay controls speed of game
+        while (!gameover)
+        {
+            input();
+            logic();
+            usleep(get_tick_speed()); // Delay controls speed of game
+        }
+        printf("\nGame Over!\n");
+        printf("Your final score was %d\n", score);
+        if (score > highscore) {
+            highscore = score;
+            printf("New Highscore!\n");
+        } else {
+            printf("The highscore is: %d\n", highscore);
+        }
+        char response;
+        printf("Do you want to play another game? (y/n)\n");
+        scanf(" %c", &response);
+        if (response != 'y') {
+            exitProgram = 1;
+        }
     }
-    printf("\nGame Over!\n");
+    
 
     return 0;
 }
