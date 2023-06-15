@@ -48,7 +48,7 @@ InstructionMapping instructionMappings[] = {
     {".int", DIR, &get_types_dir},
 };
 
-void alias(token_line line) {
+token_line alias(token_line line) {
   int zr_pos = -1;
   if (line.opcode == CMP) {
     printf("CMP aliased to SUBS\n");
@@ -92,10 +92,17 @@ void alias(token_line line) {
       line.operands[i] = line.operands[i-1];
     }
     line.operands[zr_pos].type = REG;
-    line.operands[zr_pos].word = "x32";
+
+    // Check if 32-bit or 64-bit access mode
+    if (line.operands[0].word[0] == 'w') {
+      line.operands[zr_pos].word = "w31";
+    } else {
+      line.operands[zr_pos].word = "x31";
+    }
     line.operand_count++;
   }
-  
+
+  return line;
 }
 
 void get_types_add(operand *operands, int op_count) {
@@ -421,7 +428,7 @@ token_line *read_assembly(FILE* fp, int nlines) {
       printf("Done processing line %d\n", line_count);
       if (current_line->opcode != UNRECOGNISED_OPCODE) {
         lines[line_count] = *current_line;
-        alias(lines[line_count]);
+        lines[line_count] = alias(lines[line_count]);
         line_count++;
       }
     }

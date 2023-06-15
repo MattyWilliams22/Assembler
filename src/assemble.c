@@ -497,14 +497,15 @@ void print_token_line(token_line line) {
 }
 
 void print_binary_bits(binary b){
-    int i;
+    /*int i;
     for (i = 1; i <= 32; i++){ 
       int mask =  1 << i;
       int masked_b = b & mask;
       int onebit = masked_b >> i;   
       printf("%i", onebit);
     }
-    printf("\n");
+    printf("\n");*/
+    printf("%x\n", b);
 }
 
 void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
