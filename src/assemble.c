@@ -6,7 +6,7 @@
 #include "assembleutils.h"
 #include "tokenizer.h"
 
-#define HALT 0x8a000000
+#define HALTINSTR 0x8a000000
 #define NOOP 0xd503201f
 
 AssembleMapping assembleMappings[] = {
@@ -25,6 +25,14 @@ AssembleMapping assembleMappings[] = {
     {MOVK, &assemble_DP, 0x3},
     {MOVN, &assemble_DP, 0x0},
     {MOVZ, &assemble_DP, 0x2},
+    {MADD, &assemble_DP, 0x0},
+    {MSUB, &assemble_DP, 0x0},
+    {B, &assemble_B, 0x0},
+    {BCOND, &assemble_B, 0x0},
+    {BR, &assemble_B, 0x0},
+    {STR, &assemble_SDT, 0x0},
+    {LDR, &assemble_SDT, 0x0},
+    {LDRLIT, &assemble_SDT, 0x0},
     {NOP, &assemble_SP, 0x0},
     {HALT, &assemble_SP, 0x0},
     {DIR, &assemble_SP, 0x0}
@@ -34,9 +42,9 @@ AssembleMapping assembleMappings[] = {
 binary set_bits(binary input, int start, int end, binary value) {
   binary mask = 0;
   for (int i = start; i <= end; i++) {
-    mask = mask | (1 << i);
+    mask = mask | (binary) 1 << i;
   }
-  return (input & ~mask) | ((value << start) && mask);
+  return (input & ~mask) | (value << start);
 }
 
 // Applies the shift to the binary input
@@ -199,8 +207,7 @@ binary assemble_DP(token_line line) {
   }
 
   // Immediate
-  if ((line.operand_count == 3 && line.operands[2].type != REG) || line.operand_count == 4 ||\
-      (line.operand_count == 2 && line.operands[1].type != REG)) {
+  if (line.operands[1].type == IMM || (line.operand_count > 2 && line.operands[2].type == IMM)) {
     // Set bits 30 to 29 as value of opcode
     result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
     // Set bits 28 to 26 as 100
@@ -223,7 +230,7 @@ binary assemble_DP(token_line line) {
       // Set bits 21 to 10 as imm12
       result = set_bits(result, 10, 21, convert_IMM(line.operands[2]));
       // Set bit 22 as sh
-      if (line.operands[3].type == SHIFT && get_shift_amount(line.operands[3]) == 0xc) {
+      if (line.operands[line.operand_count - 2].type == SHIFT && get_shift_amount(line.operands[line.operand_count - 1]) == 0xc) {
         result = set_bits(result, 22, 22, 1);
       }
       // Set bits 25 to 23 as opi
@@ -250,12 +257,17 @@ binary assemble_DP(token_line line) {
       result = set_bits(result, 28, 28, 0);
       // Set bit 24 as 1
       result = set_bits(result, 24, 24, 1);
-      // Set bits 23 to 22 as shift type
-      result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
+
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
+        // Set bits 23 to 22 as shift type
+        result = set_bits(result, 22, 23, convert_SHIFT(line.operands[line.operand_count - 2])); 
+        // Set bits 15 to 10 as shift amount
+        result = set_bits(result, 10, 15, get_shift_amount(line.operands[line.operand_count - 1]));      
+      }
+      
       // Set bit 21 as 0
       result = set_bits(result, 21, 21, 0);
-      // Set bits 15 to 10 as shift amount
-      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
+      
     } else if (line.opcode == MADD || line.opcode == MSUB) {
       // Multiply
 
@@ -276,14 +288,18 @@ binary assemble_DP(token_line line) {
       result = set_bits(result, 28, 28, 0);
       // Set bit 24 as 1
       result = set_bits(result, 24, 24, 0);
-      // Set bits 23 to 22 as shift type
-      result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
+
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
+        // Set bits 23 to 22 as shift type
+        result = set_bits(result, 22, 23, convert_SHIFT(line.operands[line.operand_count - 2])); 
+        // Set bits 15 to 10 as shift amount
+        result = set_bits(result, 10, 15, get_shift_amount(line.operands[line.operand_count - 1]));      
+      }
+
       // Set bit 21 as N
       if (line.opcode == BIC || line.opcode == ORN || line.opcode == EON || line.opcode == BICS) {
         result = set_bits(result, 21, 21, 1);
       }
-      // Set bits 15 to 10 as shift amount
-      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
     }
   }
   return result;
@@ -416,7 +432,7 @@ binary assemble_SP(token_line line) {
     return convert_IMM(line.operands[0]);
   } else {
     // line.opcode == HALT
-    return HALT;
+    return HALTINSTR;
   }
 }
 
@@ -480,24 +496,6 @@ void print_token_line(token_line line) {
   printf("\n");
 }
 
-void print_binary_line(binary line) {
-  for (int i = 31; i >= 0; --i) {
-    printf("%u", line >> i & 1);
-  }
-  printf("\n");
-}
-
-void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
-  printf("Tokenised version of input:\n\n");
-  for (int i = 0; i < nlines; i++) {
-    print_token_line(token_lines[i]);
-  }
-  printf("Binary output:\n\n");
-  for (int i = 0; i < nlines; i++) {
-    print_binary_line(binary_lines[i]);
-  }
-}
-
 void print_binary_bits(binary b){
     int i;
     for (i = 1; i <= 32; i++){ 
@@ -508,6 +506,19 @@ void print_binary_bits(binary b){
     }
     printf("\n");
 }
+
+void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
+  printf("\nTokenised version of input:\n\n");
+  for (int i = 0; i < nlines; i++) {
+    print_token_line(token_lines[i]);
+  }
+  printf("\nBinary output:\n\n");
+  for (int i = 0; i < nlines; i++) {
+    print_binary_bits(binary_lines[i]);
+  }
+}
+
+
 
 int main(int argc, char **argv) {
 
@@ -539,7 +550,7 @@ int main(int argc, char **argv) {
 		perror("Could not open output file.");
 		exit(EXIT_FAILURE);
 	}
-  printf("Opened output file \"%s\" successfully\n", argv[2]);
+  printf("\nOpened output file \"%s\" successfully\n", argv[2]);
 
   // Writes binary_lines to output file
   write_to_binary_file(output, binary_lines, nlines);
@@ -548,6 +559,6 @@ int main(int argc, char **argv) {
   print_lines(token_lines, binary_lines, nlines);
 
   fclose(output);
-  printf("Assembly completed successfully!\n");
+  printf("\nAssembly completed successfully!\n");
   return EXIT_SUCCESS;
 }

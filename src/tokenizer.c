@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -81,9 +82,9 @@ void alias(token_line line) {
     printf("MUL aliased to MADD\n");
     line.opcode = MADD;
     zr_pos = 3;
-  } else if (line.opcode == MSUB) {
-    printf("MSUB aliased to ORR\n");
-    line.opcode = ORR;
+  } else if (line.opcode == MNEG) {
+    printf("MNEG aliased to MSUB\n");
+    line.opcode = MSUB;
     zr_pos = 3;
   }
   if (zr_pos != -1) {
@@ -293,8 +294,8 @@ void get_types_null(operand *operands, int op_count) {
 bool is_halt(opcode_name opcode, operand *operands, int op_count) {
   if (opcode == AND && op_count == 3) {
     if (strcmp(operands[0].word, "x0") == 0 
-    && strcmp(operands[1].word, " x0") == 0
-    && strcmp(operands[2].word, " x0") == 0) {
+    && strcmp(operands[1].word, "x0") == 0
+    && strcmp(operands[2].word, "x0") == 0) {
       return true;
     }
   }
@@ -302,20 +303,29 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 }
 
 // Converts a line of text into a token_line
-token_line *process_line(char line[]) {
+token_line *process_line(char *line) {
   printf("Processing the string: %s\n", line);
 
-  const char s[] = " "; 
-  const char d[] = ",";
-  char *instr_str = strtok(line, s);
   int string_count = 0;
   char *strings[10];
-  int char_count = 0;
 
-  while (instr_str != NULL) {
-    strings[string_count] = instr_str;
+  while (*line != '\0') {  
+    while (isspace(*line) || *line == ',') {
+      line++;
+    }
+
+    char *start = line;
+
+    while (*line != '\0' && !isspace(*line) && *line != ',') {
+      line++;
+    }
+
+    char ch = *line; // char beyond end of characters
+    *line = '\0'; // temporarily terminate string
+
+    strings[string_count] = strdup(start);
     string_count++;
-    instr_str = strtok(NULL, d);
+    *line = ch; // restore the original unused char
   }
 
   // The strings need processing
@@ -351,8 +361,8 @@ token_line *process_line(char line[]) {
   }
 
   if (opcode == UNRECOGNISED_OPCODE) {
-    int length = strlen(instr_str);
-    if (instr_str[length - 1] == ':') {
+    int length = strlen(strings[0]);
+    if (strings[0][length - 1] == ':') {
       opcode = LABEL_OPCODE;
       get_types = &get_types_null;
       add_address(label_table, current_operands[1].word, line_count);
@@ -369,6 +379,14 @@ token_line *process_line(char line[]) {
 
   if (has_function) {
     get_types(current_operands, operand_count);
+  }
+
+  if (strcmp(current_operands[operand_count - 2].word, "lsl") == 0 ||\
+  strcmp(current_operands[operand_count - 2].word, "lsr") == 0 ||\
+  strcmp(current_operands[operand_count - 2].word, "asr") == 0 ||\
+  strcmp(current_operands[operand_count - 2].word, "ror") == 0) {
+    current_operands[operand_count - 2].type = SHIFT;
+    current_operands[operand_count - 1].type = IMM;
   }
 
   operand *operands = malloc(operand_count * sizeof(operand));
