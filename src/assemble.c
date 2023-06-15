@@ -264,8 +264,6 @@ binary assemble_DP(token_line line) {
         result = set_bits(result, 10, 15, get_shift_amount(line.operands[line.operand_count - 1]));      
       }
 
-      // Set bits 23 to 22 as shift type
-      result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
       // Set bit 21 as N
       if (line.opcode == BIC || line.opcode == ORN || line.opcode == EON || line.opcode == BICS) {
         result = set_bits(result, 21, 21, 1);
