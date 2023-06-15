@@ -10,14 +10,16 @@
 #define WIDTH 20
 #define HEIGHT 20
 #define UP 'w'
-#define DOWN 's'
 #define LEFT 'a'
+#define DOWN 's'
 #define RIGHT 'd'
 
 int score;
 int highscore;
 int gameover;
-int x, y, fruitX, fruitY, flag;
+int x, y;
+int fruitX, fruitY;
+int flag;
 
 int tailX[100], tailY[100];
 int nTail;
@@ -37,25 +39,24 @@ int keyboard_event()
     int ch;
     int oldf;
 
-    tcgetattr(STDIN_FILENO, &oldterminal);
-    newterminal = oldterminal;
-    newterminal.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newterminal);
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+  tcgetattr(STDIN_FILENO, &oldterminal);
+  newterminal = oldterminal;
+  newterminal.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newterminal);
+  original_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, original_flags | O_NONBLOCK);
 
-    ch = getchar();
+  ch = getchar();
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldterminal);
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldterminal);
+  fcntl(STDIN_FILENO, F_SETFL, original_flags);
 
-    if (ch != EOF)
-    {
-        ungetc(ch, stdin);
-        return 1;
-    }
+  if (ch != EOF) {
+    ungetc(ch, stdin);
+    return 1;
+  }
 
-    return 0;
+  return 0;
 }
 
 void setup()
@@ -85,37 +86,30 @@ void draw()
         printf("#");
     printf("\n");
 
-    for (i = 0; i < HEIGHT; i++)
-    {
-        for (j = 0; j < WIDTH; j++)
-        {
-            if (j == 0)
-                printf("#");
-            if (i == y && j == x)
-                printf("O");
-            else if (i == fruitY && j == fruitX)
-                printf("X");
-            else
-            {
-                int print = 0;
-                for (int k = 0; k < nTail; k++)
-                {
-                    if (i == tailY[k] && j == tailX[k])
-                    {
-                        printf("o");
-                        print = 1;
-                    }
-                }
-                if (!print)
-                    printf(" ");
-            }
-            if (j == WIDTH - 1)
-                printf("#");
+  for (i = 0; i < HEIGHT; i++) {
+    for (j = 0; j < WIDTH; j++) {
+      if (j == 0) {
+        printf("#");
+      }
+      if (i == y && j == x) {
+        printf("O");
+      }
+      else if (i == fruitY && j == fruitX) {
+        printf("X");
+      }
+      else {
+        int print = 0;
+        for (int k = 0; k < nTail; k++) {
+          if (i == tailY[k] && j == tailX[k]) {
+            printf("o");
+            print = 1;
+          }
         }
-        printf("\n");
-    }
-
-    for (i = 0; i < WIDTH + 2; i++)
+        if (!print) {
+          printf(" ");
+        }
+      }
+      if (j == WIDTH - 1) {
         printf("#");
     printf("\n");
 
@@ -250,5 +244,5 @@ int main()
     }
     
 
-    return 0;
+  return 0;
 }
