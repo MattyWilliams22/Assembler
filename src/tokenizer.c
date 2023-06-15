@@ -50,30 +50,39 @@ InstructionMapping instructionMappings[] = {
 void alias(token_line line) {
   int zr_pos = -1;
   if (line.opcode == CMP) {
+    printf("CMP aliased to SUBS\n");
     line.opcode = SUBS;
     zr_pos = 0;
   } else if (line.opcode == CMN) {
+    printf("CMN aliased to ADDS\n");
     line.opcode = ADDS;
     zr_pos = 0;
   } else if (line.opcode == NEG) {
+    printf("NEG aliased to SUB\n");
     line.opcode = SUB;
     zr_pos = 1;
   } else if (line.opcode == NEGS) {
+    printf("NEGS aliased to SUBS\n");
     line.opcode = SUBS;
     zr_pos = 1;
   } else if (line.opcode == TST) {
+    printf("TST aliased to ANDS\n");
     line.opcode = ANDS;
     zr_pos = 0;
   } else if (line.opcode == MVN) {
+    printf("MVN aliased to ORN\n");
     line.opcode = ORN;
     zr_pos = 1;
   } else if (line.opcode == MOV) {
+    printf("MOV aliased to ORR\n");
     line.opcode = ORR;
     zr_pos = 1;
   } else if (line.opcode == MUL) {
+    printf("MUL aliased to MADD\n");
     line.opcode = MADD;
     zr_pos = 3;
   } else if (line.opcode == MSUB) {
+    printf("MSUB aliased to ORR\n");
     line.opcode = ORR;
     zr_pos = 3;
   }
@@ -294,6 +303,8 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 
 // Converts a line of text into a token_line
 token_line *process_line(char line[]) {
+  printf("Processing the string: %s\n", line);
+
   const char s[] = " "; 
   const char d[] = ",";
   char *instr_str = strtok(line, s);
@@ -361,10 +372,12 @@ token_line *process_line(char line[]) {
 
   operand *operands = malloc(operand_count * sizeof(operand));
 
+  printf("The opcode is %d\n", opcode);
   for (int i = 0; i < operand_count; i++) {
     operands[i] = *make_operand(current_operands[i].type, current_operands[i].word);
+    printf("Operand %d has type: %d and value: %s\n", i, operands[i].type, operands[i].word);
   }
-
+  
   token_line *current_line = make_token_line(opcode, operand_count, operands);
 
   return current_line; 
@@ -384,16 +397,19 @@ token_line *read_assembly(FILE* fp, int nlines) {
     }
 
     if (strlen(line) != 0) {
+      printf("Processing line %d\n", line_count + 1);
       token_line *current_line = process_line(line);
-      
+      printf("Done processing line %d\n", line_count);
       if (current_line->opcode != UNRECOGNISED_OPCODE) {
         lines[line_count] = *current_line;
         alias(lines[line_count]);
         line_count++;
       }
     }
+    
   }
   free_table(label_table);
+  printf("Read assembly is now complete\n");
   fclose(fp);
   return lines;
 }

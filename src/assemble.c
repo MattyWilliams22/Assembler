@@ -41,101 +41,131 @@ binary set_bits(binary input, int start, int end, binary value) {
 
 // Applies the shift to the binary input
 binary convert_SHIFT(operand op) {
+  printf("Converting shift type of %s to binary\n", op.word);
+  binary result;
   if (op.word[0] == 'l') {
     // lsl or lsr
     if (op.word[2] == 'l') {
       // lsl
-      return 0x0;
+      result = 0x0;
     } else {
       // lsr
-      return 0x1;
+      result = 0x1;
     }
   } else if (op.word[0] == 'a') {
     // asr
-    return 0x2;
+    result = 0x2;
   } else {
     // ror
-    return 0x3;
+    result = 0x3;
   }
+  printf("Binary representation of shift type is %d\n", result);
+  return result;
 }
 
 // Converts an opcode to its binary representation
 binary convert_OPCODE(opcode_name name) {
+  printf("Converting opcode %d to binary\n", name);
+  binary result = 0xff;
   for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
     if (name == assembleMappings[i].opcode) {
-      return assembleMappings[i].opc;
+      result = assembleMappings[i].opc;
     }
   }
-  return 0xff;
+  printf("Binary representation of opcode is %d\n", result);
+  return result;
 }
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
-  return atoi(&op.word[1]);
+  printf("Converting register %s to binary\n", op.word);
+  binary result = atoi(&op.word[1]);
+  printf("Binary representation of register is %d\n", result);
+  return result;
 }
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
+  printf("Converting immediate value %s to binary\n", op.word);
   if (op.word[0] == '#') {
     op.word = &op.word[1];
   }
 
+  binary result;
   if (op.word[0] == '0' && op.word[1] == 'x') {
     // hex
-    return (int)strtol(&op.word[2], NULL, 16);
+    result = (binary) strtol(&op.word[2], NULL, 16);
   } else {
     // decimal
-    return atoi(op.word);
+    result = atoi(op.word);
   }
+  printf("Binary representation of immediate value is %d\n", result);
+  return result;
 }
 
 // Gets the number of bits to shift by
 binary get_shift_amount(operand op) {
+  printf("Converting shift amount of %s to binary\n", op.word);
   int length = strlen(op.word);
   for (int i = 0; i < length; i++) {
     if (op.word[i] == '#') {
       op.word = &op.word[i];
     }
   }
-  return convert_IMM(op);
+  binary result = convert_IMM(op);
+  printf("Binary representation of shift amount is %d\n", result);
+  return result;
 }
 
 binary convert_COND(operand op) {
+  printf("Converting condition %s to binary\n", op.word);
+  binary result;
   switch (op.word[0]) {
     case 'e':
       // eq
-      return 0x0;
+      result = 0x0;
+      break;
     case 'n':
       // ne
-      return 0x1;
+      result = 0x1;
+      break;
     case 'g':
       // ge or gt
       if (op.word[1] == 'e') {
         // ge
-        return 0xa;
+        result = 0xa;
+        break;
       } else {
         // gt
-        return 0xc;
+        result = 0xc;
+        break;
       }
     case 'l':
       // lt or le
       if (op.word[1] == 'e') {
         // le
-        return 0xd;
+        result = 0xd;
+        break;
       } else {
         // lt
-        return 0xb;
+        result = 0xb;
+        break;
       }
     case 'a':
       // al
-      return 0xe;
+      result = 0xe;
+      break;
     default:
       // error
-      return 0xf;
+      result = 0xf;
+      break;
   }
+  printf("Binary representation of condition is %d\n", result);
+  return result;
 }
 
 binary convert_ADDR_MODE(operand op, addressing_mode mode) {
+  printf("Converting addressing mode %d to binary\n", mode);
   binary result = 0;
   if (mode == REG_OFF) {
     result = set_bits(result, 11, 11, 1);
@@ -152,11 +182,13 @@ binary convert_ADDR_MODE(operand op, addressing_mode mode) {
       result = set_bits(result, 0, 1, 1);
     }
   }
+  printf("Binary representation of addressing mode is %d\n", result);
   return result;
 }
 
 // Data Processing Instruction Assembler
 binary assemble_DP(token_line line) {
+  printf("Assembling data processing instruction\n");
   binary result = 0;
 
   // Set bit 31 to register access mode
@@ -259,6 +291,7 @@ binary assemble_DP(token_line line) {
 
 // Branch Instruction Assembler
 binary assemble_B(token_line line) {
+  printf("Assembling branch instruction\n");
   binary result = 0;
   if (line.opcode == B) {
     // Unconditional
@@ -287,19 +320,23 @@ binary assemble_B(token_line line) {
 }
 
 addressing_mode get_addressing_mode(token_line line) {
+  printf("Finding addressing mode\n");
   line.operands[1].word = &line.operands[1].word[1];
   int length1 = strlen(line.operands[2].word);
   if (line.operands[2].word[length1 - 1] == '!') {
     // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
     line.operands[2].word[length1 - 3] = '\0';
+    printf("Addressing mode is PRE INDEX\n");
     return PRE_IND;
   } else if (line.operands[2].word[length1] != ']') {
     // <Rt>, [<Xn>], #<simm>                     (Post-index)
     line.operands[2].word[length1 - 2] = '\0';
+    printf("Addressing mode is POST INDEX\n");
     return POST_IND;
   } else if (line.operands[2].word[0] == '#') {
     // <Rt>, [<Xn|SP>, #<imm>]                   (Unsigned Offset)
     line.operands[2].word[length1 - 2] = '\0';
+    printf("Addressing mode is UNSIGNED OFFSET\n");
     return UNSIGNED_OFF;
   } else {
     // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
@@ -311,12 +348,14 @@ addressing_mode get_addressing_mode(token_line line) {
     // <Rt>, [<Xn>, <Rm>]
     line.operands[2].word[length1 - 2] = '\0';
     }
+    printf("Addressing mode is REGISTER OFFSET\n");
     return REG_OFF;
   }
 }
 
 // Single Data Transfer Instruction Assembler
 binary assemble_SDT(token_line line) {
+  printf("Assembling special instruction\n");
   binary result = 0;
 
   // Set bit 31 to register access mode
@@ -370,6 +409,7 @@ binary assemble_SDT(token_line line) {
 
 // Special Instruction Assembler
 binary assemble_SP(token_line line) {
+  printf("Assembling special instruction\n");
   if (line.opcode == NOP) {
     return NOOP;
   } else if (line.opcode == DIR) {
@@ -463,6 +503,7 @@ int main(int argc, char **argv) {
 		perror("Could not open input file.");
 		exit(EXIT_FAILURE);
 	}
+  printf("Opened input file %s successfully\n", argv[1]);
 
   // Get number of lines in input file
   int nlines = count_lines(input);
@@ -474,7 +515,9 @@ int main(int argc, char **argv) {
   // Convert token_lines to binary_lines
   binary binary_lines[nlines];
   for (int i = 0; i < nlines; i++) {
+    printf("Assembling line %d\n", i);
     binary_lines[i] = assemble_line(token_lines[i]);
+    printf("The binary representation of line %d is:\n%d\n", i,  binary_lines[i]);
   }
 
   FILE* output = fopen(argv[2], "wb+");
@@ -482,6 +525,7 @@ int main(int argc, char **argv) {
 		perror("Could not open output file.");
 		exit(EXIT_FAILURE);
 	}
+  printf("Opened output file %s successfully\n", argv[2]);
 
   // Writes binary_lines to output file
   write_to_binary_file(output, binary_lines, nlines);
@@ -489,5 +533,6 @@ int main(int argc, char **argv) {
   // TEMPORARY Prints lines for testing
   print_lines(token_lines, binary_lines, nlines);
 
+  fclose(output);
   return EXIT_SUCCESS;
 }
