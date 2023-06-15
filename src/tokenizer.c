@@ -310,7 +310,7 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 }
 
 // Converts a line of text into a token_line
-token_line *process_line(char *line) {
+token_line *process_line(char *line, int line_no) {
   printf("Processing the string: %s\n", line);
 
   int string_count = 0;
@@ -388,12 +388,12 @@ token_line *process_line(char *line) {
     if (strings[0][length] == ':') {
       opcode = LABEL_OPCODE;
       get_types = &get_types_null;
-      add_address(label_table, strings[0], line_count);
+      add_address(label_table, strings[0], line_no);
     }
   }
 
-  if(opcode == AND) {
-    if(is_halt(opcode, current_operands, operand_count)) {
+  if (opcode == AND) {
+    if (is_halt(opcode, current_operands, operand_count)) {
       opcode = HALT;
       get_types = &get_types_null;
       operand_count = 0;
@@ -440,8 +440,8 @@ token_line *read_assembly(FILE* fp, int nlines) {
 
     if (strlen(line) != 0) {
       printf("\nProcessing line %d\n", line_count + 1);
-      token_line *current_line = process_line(line);
-      printf("Done processing line %d\n", line_count);
+      token_line *current_line = process_line(line, line_count);
+      printf("Done processing line %d\n", line_count + 1);
       if (current_line->opcode != UNRECOGNISED_OPCODE) {
         lines[line_count] = *current_line;
         lines[line_count] = alias(lines[line_count]);

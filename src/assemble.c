@@ -553,7 +553,7 @@ int main(int argc, char **argv) {
     if (token_lines[token_line_count].opcode == LABEL_OPCODE) { 
       token_line_count++;
     } else {
-      printf("\nAssembling line %d\n", binary_line_count);
+      printf("\nAssembling line %d\n", binary_line_count + 1);
       binary_lines[binary_line_count] = assemble_line(token_lines[token_line_count]);
       binary_line_count++;
       token_line_count++;
