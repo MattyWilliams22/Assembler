@@ -329,17 +329,15 @@ token_line *process_line(char *line, int line_no) {
 
     char ch = *line; // char beyond end of characters
     *line = '\0'; // temporarily terminate string
-
     strings[string_count] = strdup(start);
     string_count++;
     *line = ch; // restore the original unused char
   }
 
-  // The strings need processing
-  // Could be:
-  // ["x0", " x0", " x0"]
-  // or ["x2", "lsl #12"]
-  // or ["x1", " [x3", "#5]!"]
+  // Removes a trailing empty string
+  if (strings[string_count - 1][0] == '\0') {
+    string_count--;
+  }
 
   // b.cond case
   if (string_count > 0) {
@@ -438,9 +436,24 @@ token_line *read_assembly(FILE* fp, int nlines) {
       line[strlen(line) - 1] = '\0';
     }
 
-    if (strlen(line) != 0) {
+    // Removes starting and trailing spaces from string
+    int start = 0;
+    while (isspace(line[start])) {
+      start++;
+    }
+    int end_pos = strlen(line);
+    while (end_pos >= 0) {
+      if (isspace(line[end_pos])) {
+        end_pos--;
+      } else {
+        break;
+      }
+    }
+    line[end_pos] = '\0';
+
+    if (strlen(&line[start]) != 0) {
       printf("\nProcessing line %d\n", line_count + 1);
-      token_line *current_line = process_line(line, line_count);
+      token_line *current_line = process_line(&line[start], line_count);
       printf("Done processing line %d\n", line_count + 1);
       if (current_line->opcode != UNRECOGNISED_OPCODE) {
         lines[line_count] = *current_line;

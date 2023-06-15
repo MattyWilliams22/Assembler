@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -371,7 +372,7 @@ addressing_mode get_addressing_mode(token_line line) {
 
 // Single Data Transfer Instruction Assembler
 binary assemble_SDT(token_line line) {
-  printf("Assembling special instruction\n");
+  printf("Assembling simple data transfer instruction\n");
   binary result = 0;
 
   // Set bit 31 to register access mode
@@ -436,7 +437,17 @@ binary assemble_SP(token_line line) {
   }
 }
 
+void print_token_line(token_line line) {
+  printf("| Opcode: %d | ", line.opcode);
+  for (int i = 0; i < line.operand_count; i++) {
+    printf("%s | ", line.operands[i].word);
+  }
+  printf("\n");
+}
+
 binary assemble_line(token_line line) {
+  printf("Assembling line: ");
+  print_token_line(line);
   func_ptr assemble_func;
   for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
     if (line.opcode == assembleMappings[i].opcode) {
@@ -460,7 +471,13 @@ int count_lines(FILE *fp) {
       line[strlen(line) - 1] = '\0';
     }
 
-    if (strlen(line) != 0) {
+    // Removes spaces
+    int start = 0;
+    while (isspace(line[start])) {
+      start++;
+    }
+
+    if (strlen(&line[start]) != 0) {
       count += 1;
     }
   }
@@ -486,14 +503,6 @@ void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
   for (int i = 0; i < nlines; i++) {
     fwrite(&binary_lines[i], sizeof(binary), 1, fp);
   }
-}
-
-void print_token_line(token_line line) {
-  printf("| Opcode: %d | ", line.opcode);
-  for (int i = 0; i < line.operand_count; i++) {
-    printf("%s | ", line.operands[i].word);
-  }
-  printf("\n");
 }
 
 void print_binary_bits(binary b){
