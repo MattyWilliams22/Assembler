@@ -75,7 +75,7 @@ void alias(token_line line) {
     line.opcode = MADD;
     zr_pos = 3;
   } else if (line.opcode == MNEG) {
-    line.opcode = ORR;
+    line.opcode = MSUB;
     zr_pos = 3;
   }
   if (zr_pos != -1) {

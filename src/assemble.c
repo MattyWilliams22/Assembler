@@ -186,9 +186,9 @@ binary assemble_DP(token_line line) {
       // Set bits 20 to 5 as imm16
       result = set_bits(result, 5, 20, convert_IMM(line.operands[1]));
       // Set bits 22 to 21 as hw (shift left by hw * 16 bits)
-      if (line.operands[2].type == SHIFT) {
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
         // Do I need to divide by 16? 
-        result = set_bits(result, 21, 22, get_shift_amount(line.operands[2]) / 16);
+        result = set_bits(result, 21, 22, get_shift_amount(line.operands[line.operand_count - 1]) / 16);
       }
       // Set bits 25 to 23 as opi
       result = set_bits(result, 23, 25, 0x5);
