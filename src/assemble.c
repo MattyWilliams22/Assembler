@@ -531,19 +531,35 @@ int main(int argc, char **argv) {
   printf("Opened input file \"%s\" successfully\n", argv[1]);
 
   // Get number of lines in input file
-  int nlines = count_lines(input);
+  int ntokenlines = count_lines(input);
   rewind(input);
 
   // Convert lines of file to an array of token_lines
-  token_line *token_lines = read_assembly(input, nlines);
+  token_line *token_lines = read_assembly(input, ntokenlines);
+
+  int noutputlines = 0;
+
+  for (int i = 0; i < ntokenlines; i ++) {
+    if (token_lines[i].opcode != LABEL_OPCODE) {
+      noutputlines++;
+    }
+  }
 
   // Convert token_lines to binary_lines
-  binary binary_lines[nlines];
-  for (int i = 0; i < nlines; i++) {
-    printf("\nAssembling line %d\n", i);
-    binary_lines[i] = assemble_line(token_lines[i]);
-    printf("The binary representation of line %d is:\n", i);
-    print_binary_bits(binary_lines[i]);
+  binary binary_lines[noutputlines];
+  int binary_line_count = 0;
+  int token_line_count = 0;
+  while (token_line_count < ntokenlines) {
+    if (token_lines[token_line_count].opcode == LABEL_OPCODE) { 
+      token_line_count++;
+    } else {
+      printf("\nAssembling line %d\n", binary_line_count);
+      binary_lines[binary_line_count] = assemble_line(token_lines[token_line_count]);
+      binary_line_count++;
+      token_line_count++;
+      printf("The binary representation of line %d is:\n", binary_line_count);
+      print_binary_bits(binary_lines[binary_line_count]);
+    }
   }
 
   FILE* output = fopen(argv[2], "wb+");
@@ -554,10 +570,10 @@ int main(int argc, char **argv) {
   printf("\nOpened output file \"%s\" successfully\n", argv[2]);
 
   // Writes binary_lines to output file
-  write_to_binary_file(output, binary_lines, nlines);
+  write_to_binary_file(output, binary_lines, noutputlines);
 
   // TEMPORARY Prints lines for testing
-  print_lines(token_lines, binary_lines, nlines);
+  print_lines(token_lines, binary_lines, noutputlines);
 
   fclose(output);
   printf("\nAssembly completed successfully!\n");

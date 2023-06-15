@@ -368,11 +368,11 @@ token_line *process_line(char *line) {
   }
 
   if (opcode == UNRECOGNISED_OPCODE) {
-    int length = strlen(strings[0]);
-    if (strings[0][length - 1] == ':') {
+    int length = strlen(strings[0]) - 1;
+    if (strings[0][length] == ':') {
       opcode = LABEL_OPCODE;
       get_types = &get_types_null;
-      add_address(label_table, current_operands[1].word, line_count);
+      add_address(label_table, strings[0], line_count);
     }
   }
 
@@ -432,8 +432,8 @@ token_line *read_assembly(FILE* fp, int nlines) {
         line_count++;
       }
     }
-    
   }
+
   free_table(label_table);
   printf("\nRead assembly is now complete\n");
   fclose(fp);
