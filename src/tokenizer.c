@@ -284,8 +284,8 @@ void get_types_null(operand *operands, int op_count) {
 bool is_halt(opcode_name opcode, operand *operands, int op_count) {
   if (opcode == AND && op_count == 3) {
     if (strcmp(operands[0].word, "x0") == 0 
-    && strcmp(operands[1].word, "x0") == 0
-    && strcmp(operands[2].word, "x0") == 0) {
+    && strcmp(operands[1].word, " x0") == 0
+    && strcmp(operands[2].word, " x0") == 0) {
       return true;
     }
   }

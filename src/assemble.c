@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "assemble.h"
+#include "assembleutils.h"
 #include "tokenizer.h"
 
 #define HALT 0x8a000000
@@ -24,6 +25,9 @@ AssembleMapping assembleMappings[] = {
     {MOVK, &assemble_DP, 0x3},
     {MOVN, &assemble_DP, 0x0},
     {MOVZ, &assemble_DP, 0x2},
+    {NOP, &assemble_SP, 0x0},
+    {HALT, &assemble_SP, 0x0},
+    {DIR, &assemble_SP, 0x0}
 };
 
 // Sets bits in given binary to the given value
@@ -163,7 +167,8 @@ binary assemble_DP(token_line line) {
   }
 
   // Immediate
-  if (line.operands[2].type != REG) {
+  if ((line.operand_count == 3 && line.operands[2].type != REG) || line.operand_count == 4 ||\
+      (line.operand_count == 2 && line.operands[1].type != REG)) {
     // Set bits 30 to 29 as value of opcode
     result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
     // Set bits 28 to 26 as 100
