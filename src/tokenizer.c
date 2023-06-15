@@ -147,7 +147,7 @@ void get_types_and(operand *operands, int op_count) {
   operands[0].type = REG;
   operands[1].type = REG;
   operands[2].type = REG;
-  operands[3].type = IMM;
+  operands[3].type = SHIFT;
 }
 
 void get_types_tst(operand *operands, int op_count) {
@@ -363,6 +363,7 @@ token_line *process_line(char line[]) {
     if(is_halt(opcode, current_operands, operand_count)) {
       opcode = HALT;
       get_types = &get_types_null;
+      operand_count = 0;
     }
   }
 
@@ -375,7 +376,7 @@ token_line *process_line(char line[]) {
   printf("The opcode is %d\n", opcode);
   for (int i = 0; i < operand_count; i++) {
     operands[i] = *make_operand(current_operands[i].type, current_operands[i].word);
-    printf("Operand %d has type: %d and value: %s\n", i, operands[i].type, operands[i].word);
+    printf("Operand %d has type: %d and value: \"%s\"\n", i, operands[i].type, operands[i].word);
   }
   
   token_line *current_line = make_token_line(opcode, operand_count, operands);
@@ -397,7 +398,7 @@ token_line *read_assembly(FILE* fp, int nlines) {
     }
 
     if (strlen(line) != 0) {
-      printf("Processing line %d\n", line_count + 1);
+      printf("\nProcessing line %d\n", line_count + 1);
       token_line *current_line = process_line(line);
       printf("Done processing line %d\n", line_count);
       if (current_line->opcode != UNRECOGNISED_OPCODE) {
@@ -409,7 +410,7 @@ token_line *read_assembly(FILE* fp, int nlines) {
     
   }
   free_table(label_table);
-  printf("Read assembly is now complete\n");
+  printf("\nRead assembly is now complete\n");
   fclose(fp);
   return lines;
 }

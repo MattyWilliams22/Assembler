@@ -41,7 +41,7 @@ binary set_bits(binary input, int start, int end, binary value) {
 
 // Applies the shift to the binary input
 binary convert_SHIFT(operand op) {
-  printf("Converting shift type of %s to binary\n", op.word);
+  printf("Converting shift type of \"%s\" to binary\n", op.word);
   binary result;
   if (op.word[0] == 'l') {
     // lsl or lsr
@@ -78,7 +78,7 @@ binary convert_OPCODE(opcode_name name) {
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
-  printf("Converting register %s to binary\n", op.word);
+  printf("Converting register \"%s\" to binary\n", op.word);
   binary result = atoi(&op.word[1]);
   printf("Binary representation of register is %d\n", result);
   return result;
@@ -86,7 +86,7 @@ binary convert_REG(operand op) {
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
-  printf("Converting immediate value %s to binary\n", op.word);
+  printf("Converting immediate value \"%s\" to binary\n", op.word);
   if (op.word[0] == '#') {
     op.word = &op.word[1];
   }
@@ -105,7 +105,7 @@ binary convert_IMM(operand op) {
 
 // Gets the number of bits to shift by
 binary get_shift_amount(operand op) {
-  printf("Converting shift amount of %s to binary\n", op.word);
+  printf("Converting shift amount of \"%s\" to binary\n", op.word);
   int length = strlen(op.word);
   for (int i = 0; i < length; i++) {
     if (op.word[i] == '#') {
@@ -118,7 +118,7 @@ binary get_shift_amount(operand op) {
 }
 
 binary convert_COND(operand op) {
-  printf("Converting condition %s to binary\n", op.word);
+  printf("Converting condition \"%s\" to binary\n", op.word);
   binary result;
   switch (op.word[0]) {
     case 'e':
@@ -428,7 +428,9 @@ binary assemble_line(token_line line) {
       break;
     }
   }
-  return assemble_func(line);
+  binary result = assemble_func(line);
+  printf("Done assembling line\n");
+  return result;
 }
 
 // Counts the number of lines of text in the file given by fp
@@ -496,6 +498,17 @@ void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
   }
 }
 
+void print_binary_bits(binary b){
+    int i;
+    for (i = 1; i <= 32; i++){ 
+      int mask =  1 << i;
+      int masked_b = b & mask;
+      int onebit = masked_b >> i;   
+      printf("%i", onebit);
+    }
+    printf("\n");
+}
+
 int main(int argc, char **argv) {
 
   FILE* input = fopen(argv[1], "rt");
@@ -503,7 +516,7 @@ int main(int argc, char **argv) {
 		perror("Could not open input file.");
 		exit(EXIT_FAILURE);
 	}
-  printf("Opened input file %s successfully\n", argv[1]);
+  printf("Opened input file \"%s\" successfully\n", argv[1]);
 
   // Get number of lines in input file
   int nlines = count_lines(input);
@@ -515,9 +528,10 @@ int main(int argc, char **argv) {
   // Convert token_lines to binary_lines
   binary binary_lines[nlines];
   for (int i = 0; i < nlines; i++) {
-    printf("Assembling line %d\n", i);
+    printf("\nAssembling line %d\n", i);
     binary_lines[i] = assemble_line(token_lines[i]);
-    printf("The binary representation of line %d is:\n%d\n", i,  binary_lines[i]);
+    printf("The binary representation of line %d is:\n", i);
+    print_binary_bits(binary_lines[i]);
   }
 
   FILE* output = fopen(argv[2], "wb+");
@@ -525,7 +539,7 @@ int main(int argc, char **argv) {
 		perror("Could not open output file.");
 		exit(EXIT_FAILURE);
 	}
-  printf("Opened output file %s successfully\n", argv[2]);
+  printf("Opened output file \"%s\" successfully\n", argv[2]);
 
   // Writes binary_lines to output file
   write_to_binary_file(output, binary_lines, nlines);
@@ -534,5 +548,6 @@ int main(int argc, char **argv) {
   print_lines(token_lines, binary_lines, nlines);
 
   fclose(output);
+  printf("Assembly completed successfully!\n");
   return EXIT_SUCCESS;
 }
