@@ -13,7 +13,12 @@ assemble: assemble.o tokenizer.o symbolTable.o assembleutils.o
 tokenizer.o: assembleutils.h tokenizer.h symbolTable.h
 symbolTable.o: symbolTable.h assembleutils.h
 assembleutils.o: assembleutils.h
-emulate: emulate.o
+
+emulate: emulate.o emulatesetup.o emulateio.o emulateinstructions.o emulateutils.o
+emulatesetup.o: emulatesetup.h emulateutils.h emulateinstructions.h
+emulateio.o: emulatesetup.h emulateio.h
+emulateinstructions.o: emulatesetup.h emulateutils.h emulateinstructions.h
+emualateutils.o: emualateutils.h
 
 clean:
 	$(RM) *.o assemble emulate

@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include "emulatesetup.h"
 #include "emulateio.h"
-#include "emulateinstructions.h"
 
 int main(int argc, char **argv) {
 
