@@ -426,7 +426,8 @@ binary assemble_SDT(token_line line) {
     result = set_bits(result, 30, 30, 0);
   }
 
-  if (line.opcode == LDR && line.operand_count == 2) {
+  
+  if (line.opcode == LDR && line.operand_count == 2 && line.operands[1].word[0] != '[') {
     // Load literal
     // Set bit 31 to 0
     result = set_bits(result, 31, 31, 0);
@@ -446,7 +447,7 @@ binary assemble_SDT(token_line line) {
       result = set_bits(result, 22, 23, 0);
     }
 
-     // Set bit 24 to U
+    // Set bit 24 to U
     addressing_mode mode = get_addressing_mode(line);
     if (mode == UNSIGNED_OFF) {
       result = set_bits(result, 24, 24, 1);
@@ -611,7 +612,7 @@ int main(int argc, char **argv) {
       binary_line_count++;
       token_line_count++;
       printf("The binary representation of line %d is:\n", binary_line_count);
-      print_binary_bits(binary_lines[binary_line_count]);
+      print_binary_bits(binary_lines[binary_line_count - 1]);
     }
   }
 
