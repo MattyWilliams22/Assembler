@@ -186,7 +186,7 @@ binary convert_ADDR_MODE(operand op, addressing_mode mode) {
     result = set_bits(result, 6, 10, convert_REG(op));
     result = set_bits(result, 0, 5, 0x1a);
   } else if (mode == UNSIGNED_OFF) {
-    result = convert_IMM(op);
+    result = convert_IMM(op) / 8;
   } else {
     result = set_bits(result, 11, 11, 0);
     result = set_bits(result, 2, 10, convert_IMM(op));
@@ -393,7 +393,6 @@ addressing_mode get_addressing_mode(token_line line) {
       return POST_IND;
     } else if (line.operands[2].word[0] == '#') {
       // [xn, #imm]                                     
-      line.operands[1].word = remove_first_char(line.operands[1].word);
       remove_last_char(line.operands[2].word);
       // xn, #imm
       printf("Addressing mode is UNSIGNED OFFSET\n");
