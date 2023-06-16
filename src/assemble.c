@@ -336,37 +336,76 @@ binary assemble_B(token_line line) {
   return result;
 }
 
+char *remove_first_char(char *str) {
+  char *result = strdup(&str[1]);
+  return result;
+}
+
+void remove_last_char(char *str) {
+  int end = strlen(str) - 1;
+  str[end] = '\0';
+}
+
 addressing_mode get_addressing_mode(token_line line) {
+  // rt, <address>
+  // where <address> =
+  // [xn]                Unsigned offset (2 operands)
+  // [xn, #imm]          Unsigned offset (3 operands)
+  // [xn, #simm]!        Pre indexed
+  // [xn], #simm         Post indexed
+  // [xn, xm]            Register (3 operands)
+  // [xn, xm, lsl #imm]  Register (> 3 operands)
+
+
   printf("Finding addressing mode\n");
-  line.operands[1].word = &line.operands[1].word[1];
-  int length1 = strlen(line.operands[2].word);
-  if (line.operands[2].word[length1 - 1] == '!') {
-    // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
-    line.operands[2].word[length1 - 3] = '\0';
-    printf("Addressing mode is PRE INDEX\n");
-    return PRE_IND;
-  } else if (line.operands[2].word[length1] != ']') {
-    // <Rt>, [<Xn>], #<simm>                     (Post-index)
-    line.operands[2].word[length1 - 2] = '\0';
-    printf("Addressing mode is POST INDEX\n");
-    return POST_IND;
-  } else if (line.operands[2].word[0] == '#') {
-    // <Rt>, [<Xn|SP>, #<imm>]                   (Unsigned Offset)
-    line.operands[2].word[length1 - 2] = '\0';
+
+  if (line.operand_count == 2) {
+    // [xn]                Unsigned offset (2 operands)
+    line.operands[1].word = remove_first_char(line.operands[1].word);
+    remove_last_char(line.operands[1].word);
+    line.operand_count++;
+    line.operands[2].type = IMM;
+    line.operands[2].word = "#0";
+    // xn, #0
     printf("Addressing mode is UNSIGNED OFFSET\n");
     return UNSIGNED_OFF;
   } else {
-    // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
-    if (line.operand_count == 4) {
-    // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
-    int length2 = strlen(line.operands[3].word);
-    line.operands[3].word[length2 - 2] = '\0';
+    line.operands[1].word = remove_first_char(line.operands[1].word);
+    int length1 = strlen(line.operands[1].word);
+    int length2 = strlen(line.operands[2].word);
+    if (line.operands[2].word[length2 - 1] == '!') {
+      // xn, #simm]!                    
+      remove_last_char(line.operands[2].word);
+      remove_last_char(line.operands[2].word);
+       // xn, #simm 
+      printf("Addressing mode is PRE INDEX\n");
+      return PRE_IND;
+    } else if (line.operands[1].word[length1 - 1] == ']') {
+      // xn], #simm                     
+      remove_last_char(line.operands[1].word);
+      // xn, #simm
+      printf("Addressing mode is POST INDEX\n");
+      return POST_IND;
+    } else if (line.operands[2].word[0] == '#') {
+      // [xn, #imm]                                     
+      line.operands[1].word = remove_first_char(line.operands[1].word);
+      remove_last_char(line.operands[2].word);
+      // xn, #imm
+      printf("Addressing mode is UNSIGNED OFFSET\n");
+      return UNSIGNED_OFF;
     } else {
-    // <Rt>, [<Xn>, <Rm>]
-    line.operands[2].word[length1 - 2] = '\0';
+      if (line.operand_count > 3) {
+        // xn, xm, lsl #imm]                            
+        remove_last_char(line.operands[3].word);
+        // xn, xm, lsl #imm
+      } else {
+        // xn, xm]                                      
+        remove_last_char(line.operands[2].word);
+        // xn, xm
+      }
+      printf("Addressing mode is REGISTER OFFSET\n");
+      return REG_OFF;
     }
-    printf("Addressing mode is REGISTER OFFSET\n");
-    return REG_OFF;
   }
 }
 
