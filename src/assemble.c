@@ -336,7 +336,12 @@ binary assemble_B(token_line line) {
     // Set bits 4 to 0 to cond
     result = set_bits(result, 0, 4, convert_COND(line.operands[0]));
     // Set bits 23 to 5 to the value of the literal
-    result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
+    int value = convert_IMM(line.operands[1]);
+    if (value < 0) {
+      result = set_bits(result, 5, 23, value & 0x7ffff);
+    } else {
+      result = set_bits(result, 5, 23, value);
+    }
   }
   return result;
 }
