@@ -6,7 +6,6 @@
 #include "tokenizer.h"
 #include "symbolTable.h"
 
-int line_count;
 Symbol_Table *label_table;
 
 // get_types_... functions get the types of every operand in the line
@@ -421,10 +420,9 @@ token_line *process_line(char *line, int line_no, token_line *lines) {
 }
 
 // Reads an assembly code file and processes the lines into a token_array
-token_line *read_assembly(FILE* fp, int nlines) {
+token_line *read_assembly(FILE* fp, int nlines, int *line_count) {
   char line[100];
   token_line *lines = malloc(nlines * sizeof(token_line));
-  int line_count = 0;
   label_table = malloc(sizeof(Symbol_Table));
   
   while ((fgets(line, sizeof(line), fp)) != NULL) {
@@ -449,20 +447,20 @@ token_line *read_assembly(FILE* fp, int nlines) {
     line[end_pos] = '\0';
 
     if (strlen(&line[start]) != 0) {
-      printf("\nProcessing line %d\n", line_count + 1);
-      token_line *current_line = process_line(&line[start], line_count, lines);
-      printf("Done processing line %d\n", line_count + 1);
-      if (current_line->opcode != UNRECOGNISED_OPCODE) {
-        lines[line_count] = *current_line;
-        lines[line_count] = alias(lines[line_count]);
+      printf("\nProcessing line %d\n", *line_count + 1);
+      token_line *current_line = process_line(&line[start], *line_count, lines);
+      printf("Done processing line %d\n", *line_count + 1);
+      if (current_line->opcode != UNRECOGNISED_OPCODE && current_line->opcode != LABEL_OPCODE) {
+        lines[*line_count] = *current_line;
+        lines[*line_count] = alias(lines[*line_count]);
         if (current_line->opcode == B && current_line->operands[0].word[0] != '#') {
-          add_dependency(label_table, current_line->operands[0].word, current_line->operands[0], line_count, lines);
+          add_dependency(label_table, current_line->operands[0].word, current_line->operands[0], *line_count, lines);
         } else if (current_line->opcode == BCOND && current_line->operands[1].word[1] != '#') {
-          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], line_count, lines);
+          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], *line_count, lines);
         } else if (current_line->opcode == LDR && current_line->operands[1].word[1] != '#') {
-          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], line_count, lines);
+          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], *line_count, lines);
         }
-        line_count++;
+        (*line_count)++;
       }
     }
   }
