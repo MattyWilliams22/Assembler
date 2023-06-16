@@ -224,7 +224,6 @@ void get_types_b(operand *operands, int op_count) {
   } else {
     // <label>
     operands[0].type = IMM;
-    add_dependency(label_table, operands[0].word, operands[0], line_count);
   }
 }
 
@@ -237,7 +236,6 @@ void get_types_bcond(operand *operands, int op_count) {
   } else {
     // <cond>, <label>
     operands[1].type = IMM;
-    add_dependency(label_table, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -284,7 +282,6 @@ void get_types_ldr(operand *operands, int op_count) {
   } else {
     // <Rt>, <label>
     operands[1].type = IMM;
-    add_dependency(label_table, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -310,7 +307,7 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 }
 
 // Converts a line of text into a token_line
-token_line *process_line(char *line, int line_no) {
+token_line *process_line(char *line, int line_no, token_line *lines) {
   printf("Processing the string: %s\n", line);
 
   int string_count = 0;
@@ -386,7 +383,7 @@ token_line *process_line(char *line, int line_no) {
     if (strings[0][length] == ':') {
       opcode = LABEL_OPCODE;
       get_types = &get_types_null;
-      add_address(label_table, strings[0], line_no);
+      add_address(label_table, strings[0], line_no, lines);
     }
   }
 
@@ -453,11 +450,18 @@ token_line *read_assembly(FILE* fp, int nlines) {
 
     if (strlen(&line[start]) != 0) {
       printf("\nProcessing line %d\n", line_count + 1);
-      token_line *current_line = process_line(&line[start], line_count);
+      token_line *current_line = process_line(&line[start], line_count, lines);
       printf("Done processing line %d\n", line_count + 1);
       if (current_line->opcode != UNRECOGNISED_OPCODE) {
         lines[line_count] = *current_line;
         lines[line_count] = alias(lines[line_count]);
+        if (current_line->opcode == B && current_line->operands[0].word[0] != '#') {
+          add_dependency(label_table, current_line->operands[0].word, current_line->operands[0], line_count, lines);
+        } else if (current_line->opcode == BCOND && current_line->operands[1].word[1] != '#') {
+          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], line_count, lines);
+        } else if (current_line->opcode == LDR && current_line->operands[1].word[1] != '#') {
+          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], line_count, lines);
+        }
         line_count++;
       }
     }

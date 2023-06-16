@@ -88,6 +88,11 @@ binary convert_OPCODE(opcode_name name) {
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
   printf("Converting register \"%s\" to binary\n", op.word);
+  // Converts zero register to register 32
+  if (op.word[1] == 'z') {
+    op.word[1] = '3';
+    op.word[2] = '1';
+  }
   binary result = atoi(&op.word[1]);
   printf("Binary representation of register is %d\n", result);
   return result;
