@@ -5,7 +5,6 @@
 #include <termios.h>
 #include <fcntl.h>
 
-
 #define TICKDELAY 100000.0
 #define WIDTH 20
 #define HEIGHT 20
@@ -14,10 +13,16 @@
 #define DOWN 's'
 #define RIGHT 'd'
 
+enum Mode {
+  MANUAL_MODE,
+  AUTONOMOUS_MODE  
+};
+
 int score;
 int highscore;
 int gameover;
 int x, y, fruitX, fruitY, flag;
+int mode;
 
 int tailX[100], tailY[100];
 int nTail;
@@ -141,6 +146,19 @@ void input() {
   }
 }
 
+void autonomous() {
+  // Simple heuristic to determine the direction towards the fruit
+  if (fruitX < x && flag != 4) {
+    flag = 3;  // Move left
+  } else if (fruitX > x && flag != 3) {
+    flag = 4;  // Move right
+  } else if (fruitY < y && flag != 2) {
+    flag = 1;  // Move up
+  } else if (fruitY > y && flag != 1) {
+    flag = 2;  // Move down
+  }
+}
+
 void logic() {
   int prevX = tailX[0];
   int prevY = tailY[0];
@@ -156,20 +174,20 @@ void logic() {
     prevY = prev2Y;
   }
   switch (flag) {
-  case 1:
-    y--;
-    break;
-  case 2:
-    y++;
-    break;
-  case 3:
-    x--;
-    break;
-  case 4:
-    x++;
-    break;
-  default:
-    break;
+    case 1:
+      y--;
+      break;
+    case 2:
+      y++;
+      break;
+    case 3:
+      x--;
+      break;
+    case 4:
+      x++;
+      break;
+    default:
+      break;
   }
   if (x == -1) {
     x = WIDTH - 1;
@@ -208,13 +226,26 @@ void logic() {
 }
 
 int main() {
+  srand(time(0));
+  highscore = 0;
   int exitProgram = 0;
   while (!exitProgram) {
-    srand(time(0));
+    printf("Select the mode of operation:\n");
+    printf("0. Manual Mode\n");
+    printf("1. Autonomous Mode\n");
+    printf("Enter your choice: ");
+    scanf("%d", &mode);
+
+    while (getchar() != '\n') continue;  // Clear input buffer
+
     setup();
     draw();
     while (!gameover) {
-      input();
+      if (mode == MANUAL_MODE) {
+        input();
+      } else if (mode == AUTONOMOUS_MODE) {
+        autonomous();
+      }
       logic();
       usleep(get_tick_speed()); // Delay controls speed of game
     }
@@ -233,6 +264,6 @@ int main() {
       exitProgram = 1;
     }
   }
-  
+
   return 0;
 }
