@@ -7,18 +7,10 @@ CFLAGS  ?= -std=c17 -g\
 
 .PHONY: all clean
 
-all: assemble emulate
-
-assemble: assemble.o tokenizer.o symbolTable.o assembleutils.o
-tokenizer.o: assembleutils.h tokenizer.h symbolTable.h
-symbolTable.o: symbolTable.h assembleutils.h
-assembleutils.o: assembleutils.h
-
-emulate: emulate.o emulatesetup.o emulateio.o emulateinstructions.o emulateutils.o
-emulatesetup.o: emulatesetup.h emulateutils.h emulateinstructions.h
-emulateio.o: emulatesetup.h emulateio.h
-emulateinstructions.o: emulatesetup.h emulateutils.h emulateinstructions.h
-emualateutils.o: emualateutils.h
+all:
+	$(MAKE) -C assembler
+	$(MAKE) -C emulator
 
 clean:
-	$(RM) *.o assemble emulate
+	$(MAKE) -C assembler clean
+	$(MAKE) -C emulator clean
