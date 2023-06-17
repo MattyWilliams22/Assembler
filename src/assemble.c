@@ -50,7 +50,6 @@ binary set_bits(binary input, int start, int end, binary value) {
 
 // Applies the shift to the binary input
 binary convert_SHIFT(operand op) {
-  printf("Converting shift type of \"%s\" to binary\n", op.word);
   binary result;
   if (op.word[0] == 'l') {
     // lsl or lsr
@@ -68,118 +67,89 @@ binary convert_SHIFT(operand op) {
     // ror
     result = 0x3;
   }
-  printf("Binary representation of shift type is %d\n", result);
   return result;
 }
 
 // Converts an opcode to its binary representation
 binary convert_OPCODE(opcode_name name) {
-  printf("Converting opcode %d to binary\n", name);
-  binary result = 0xff;
   for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
     if (name == assembleMappings[i].opcode) {
-      result = assembleMappings[i].opc;
+      return assembleMappings[i].opc;
     }
   }
-  printf("Binary representation of opcode is %d\n", result);
-  return result;
+  return 0xff;
 }
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
-  printf("Converting register \"%s\" to binary\n", op.word);
   // Converts zero register to register 32
   if (op.word[1] == 'z') {
     op.word[1] = '3';
     op.word[2] = '1';
   }
-  binary result = atoi(&op.word[1]);
-  printf("Binary representation of register is %d\n", result);
-  return result;
+  return atoi(&op.word[1]);
 }
 
 // Converts an immediate value to its binary representation
 binary convert_IMM(operand op) {
-  printf("Converting immediate value \"%s\" to binary\n", op.word);
   if (op.word[0] == '#') {
     op.word = &op.word[1];
   }
-
-  binary result;
   if (op.word[0] == '0' && op.word[1] == 'x') {
     // hex
-    result = (binary) strtol(&op.word[2], NULL, 16);
+    return (binary) strtol(&op.word[2], NULL, 16);
   } else {
     // decimal
-    result = atoi(op.word);
+    return atoi(op.word);
   }
-  printf("Binary representation of immediate value is %d\n", result);
-  return result;
 }
 
 // Gets the number of bits to shift by
 binary get_shift_amount(operand op) {
-  printf("Converting shift amount of \"%s\" to binary\n", op.word);
   int length = strlen(op.word);
   for (int i = 0; i < length; i++) {
     if (op.word[i] == '#') {
       op.word = &op.word[i];
     }
   }
-  binary result = convert_IMM(op);
-  printf("Binary representation of shift amount is %d\n", result);
-  return result;
+  return convert_IMM(op);
 }
 
 binary convert_COND(operand op) {
-  printf("Converting condition \"%s\" to binary\n", op.word);
-  binary result;
   switch (op.word[0]) {
     case 'e':
       // eq
-      result = 0x0;
-      break;
+      return 0x0;
     case 'n':
       // ne
-      result = 0x1;
-      break;
+      return 0x1;
     case 'g':
       // ge or gt
       if (op.word[1] == 'e') {
         // ge
-        result = 0xa;
-        break;
+        return 0xa;
       } else {
         // gt
-        result = 0xc;
-        break;
+        return 0xc;
       }
     case 'l':
       // lt or le
       if (op.word[1] == 'e') {
         // le
-        result = 0xd;
-        break;
+        return 0xd;
       } else {
         // lt
-        result = 0xb;
-        break;
+        return 0xb;
       }
     case 'a':
       // al
-      result = 0xe;
-      break;
+      return 0xe;
     default:
-      // error
-      result = 0xf;
-      break;
+      return 0xf;
   }
-  printf("Binary representation of condition is %d\n", result);
-  return result;
 }
 
 binary convert_ADDR_MODE(operand op, addressing_mode mode) {
-  printf("Converting addressing mode %d to binary\n", mode);
   binary result = 0;
   if (mode == REG_OFF) {
     result = set_bits(result, 11, 11, 1);
@@ -196,15 +166,12 @@ binary convert_ADDR_MODE(operand op, addressing_mode mode) {
       result = set_bits(result, 0, 1, 1);
     }
   }
-  printf("Binary representation of addressing mode is %d\n", result);
   return result;
 }
 
 // Data Processing Instruction Assembler
 binary assemble_DP(token_line line) {
-  printf("Assembling data processing instruction\n");
   binary result = 0;
-
   // Set bit 31 to register access mode
   if (line.operands[0].word[0] == 'x') {
     result = set_bits(result, 31, 31, 1);
@@ -313,7 +280,6 @@ binary assemble_DP(token_line line) {
 
 // Branch Instruction Assembler
 binary assemble_B(token_line line) {
-  printf("Assembling branch instruction\n");
   binary result = 0;
   if (line.opcode == B) {
     // Unconditional
@@ -361,62 +327,45 @@ void remove_last_char(char *str) {
 }
 
 addressing_mode get_addressing_mode(token_line line) {
-  // rt, <address>
-  // where <address> =
-  // [xn]                Unsigned offset (2 operands)
-  // [xn, #imm]          Unsigned offset (3 operands)
-  // [xn, #simm]!        Pre indexed
-  // [xn], #simm         Post indexed
-  // [xn, xm]            Register (3 operands)
-  // [xn, xm, lsl #imm]  Register (> 3 operands)
-
-
-  printf("Finding addressing mode\n");
-
   if (line.operand_count == 2) {
-    // [xn]                Unsigned offset (2 operands)
+    // rt, [xn]                Unsigned offset (2 operands)
     line.operands[1].word = remove_first_char(line.operands[1].word);
     remove_last_char(line.operands[1].word);
     line.operand_count++;
     line.operands[2].type = IMM;
     line.operands[2].word = "#0";
-    // xn, #0
-    printf("Addressing mode is UNSIGNED OFFSET\n");
+    // rt, xn, #0
     return UNSIGNED_OFF;
   } else {
     line.operands[1].word = remove_first_char(line.operands[1].word);
     int length1 = strlen(line.operands[1].word);
     int length2 = strlen(line.operands[2].word);
     if (line.operands[2].word[length2 - 1] == '!') {
-      // xn, #simm]!                    
+      // rt, xn, #simm]!                    
       remove_last_char(line.operands[2].word);
       remove_last_char(line.operands[2].word);
-       // xn, #simm 
-      printf("Addressing mode is PRE INDEX\n");
+      // rt, xn, #simm 
       return PRE_IND;
     } else if (line.operands[1].word[length1 - 1] == ']') {
-      // xn], #simm                     
+      // rt, xn], #simm                     
       remove_last_char(line.operands[1].word);
-      // xn, #simm
-      printf("Addressing mode is POST INDEX\n");
+      // rt, xn, #simm
       return POST_IND;
     } else if (line.operands[2].word[0] == '#') {
-      // [xn, #imm]                                     
+      // rt, [xn, #imm]                                     
       remove_last_char(line.operands[2].word);
-      // xn, #imm
-      printf("Addressing mode is UNSIGNED OFFSET\n");
+      // rt, xn, #imm
       return UNSIGNED_OFF;
     } else {
       if (line.operand_count > 3) {
-        // xn, xm, lsl #imm]                            
+        // rt, xn, xm, lsl #imm]                            
         remove_last_char(line.operands[3].word);
-        // xn, xm, lsl #imm
+        // rt, xn, xm, lsl #imm
       } else {
-        // xn, xm]                                      
+        // rt, xn, xm]                                      
         remove_last_char(line.operands[2].word);
-        // xn, xm
+        // rt, xn, xm
       }
-      printf("Addressing mode is REGISTER OFFSET\n");
       return REG_OFF;
     }
   }
@@ -424,42 +373,31 @@ addressing_mode get_addressing_mode(token_line line) {
 
 // Single Data Transfer Instruction Assembler
 binary assemble_SDT(token_line line) {
-  printf("Assembling simple data transfer instruction\n");
   binary result = 0;
-
   // Set bit 31 to register access mode
   if (line.operands[0].word[0] == 'x') {
     result = set_bits(result, 30, 30, 1);
   } else {
     result = set_bits(result, 30, 30, 0);
   }
-  printf("\nChecking for literal case:\n");
-  printf("Opcode is %d\n", line.opcode);
-  printf("Operand count is %d\n", line.operand_count);
-  printf("Operand 2 is \"%s\"\n", line.operands[1].word);
   if (line.opcode == LDR && line.operand_count == 2 && line.operands[1].word[0] != '[') {
-    printf("Load Literal\n");
     // Load literal
     // Set bit 31 to 0
     result = set_bits(result, 31, 31, 0);
     // Set bits 29 to 24 to 011000
     result = set_bits(result, 24, 29, 0x18);
     // Set bits 23 to 5 to simm19
-    printf("imm has value %x\n", convert_IMM(line.operands[1]));
     result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
     // Set bits 4 to 0 to rt
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
   } else {
-    printf("Single Data Transfer\n");
     // Single Data Transfer
-
     // Set bits 23 to 22 to 0L
     if (line.opcode == LDR) {
       result = set_bits(result, 22, 23, 1);
     } else {
       result = set_bits(result, 22, 23, 0);
     }
-
     // Set bit 24 to U
     addressing_mode mode = get_addressing_mode(line);
     if (mode == UNSIGNED_OFF) {
@@ -467,7 +405,6 @@ binary assemble_SDT(token_line line) {
     } else {
       result = set_bits(result, 24, 24, 0);
     }
-
     // Set bit 31 to 1
     result = set_bits(result, 31, 31, 1);
     // Set bits 29 to 25 to 11100
@@ -484,7 +421,6 @@ binary assemble_SDT(token_line line) {
 
 // Special Instruction Assembler
 binary assemble_SP(token_line line) {
-  printf("Assembling special instruction\n");
   if (line.opcode == NOP) {
     return NOOP;
   } else if (line.opcode == DIR) {
@@ -495,17 +431,7 @@ binary assemble_SP(token_line line) {
   }
 }
 
-void print_token_line(token_line line) {
-  printf("| Opcode: %d | ", line.opcode);
-  for (int i = 0; i < line.operand_count; i++) {
-    printf("%s | ", line.operands[i].word);
-  }
-  printf("\n");
-}
-
 binary assemble_line(token_line line) {
-  printf("Assembling line: ");
-  print_token_line(line);
   func_ptr assemble_func;
   for (int i = 0; i < sizeof(assembleMappings) / sizeof(assembleMappings[0]); i++) {
     if (line.opcode == assembleMappings[i].opcode) {
@@ -514,7 +440,6 @@ binary assemble_line(token_line line) {
     }
   }
   binary result = assemble_func(line);
-  printf("Done assembling line\n");
   return result;
 }
 
@@ -547,13 +472,13 @@ int count_lines(FILE *fp) {
 void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines, token_line *token_lines) {
   // Check if the file pointer is valid
   if (fp == NULL) {
-    printf("Invalid file pointer\n");
+    perror("Invalid file pointer\n");
     return;
   }
 
   // Check if the binary pointer is valid
   if (binary_lines == NULL) {
-    printf("Invalid binary_lines pointer\n");
+    perror("Invalid binary_lines pointer\n");
     return;
   }
 
@@ -565,31 +490,6 @@ void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines, token_line
   }
 }
 
-void print_binary_bits(binary b){
-    /*int i;
-    for (i = 1; i <= 32; i++){ 
-      int mask =  1 << i;
-      int masked_b = b & mask;
-      int onebit = masked_b >> i;   
-      printf("%i", onebit);
-    }
-    printf("\n");*/
-    printf("%x\n", b);
-}
-
-void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
-  printf("\nTokenised version of input:\n\n");
-  for (int i = 0; i < nlines; i++) {
-    print_token_line(token_lines[i]);
-  }
-  printf("\nBinary output:\n\n");
-  for (int i = 0; i < nlines; i++) {
-    if (binary_lines[i] != 0 || token_lines[i].opcode == DIR) {
-      print_binary_bits(binary_lines[i]);
-    }
-  }
-}
-
 int main(int argc, char **argv) {
 
   FILE* input = fopen(argv[1], "rt");
@@ -597,7 +497,6 @@ int main(int argc, char **argv) {
 		perror("Could not open input file.");
 		exit(EXIT_FAILURE);
 	}
-  printf("Opened input file \"%s\" successfully\n", argv[1]);
 
   // Get number of lines in input file
   int nlines = count_lines(input);
@@ -610,10 +509,7 @@ int main(int argc, char **argv) {
   // Convert token_lines to binary_lines
   binary binary_lines[ntokenlines];
   for (int i = 0; i < ntokenlines; i++) {
-      printf("\nAssembling line %d\n", i + 1);
       binary_lines[i] = assemble_line(token_lines[i]);
-      printf("The binary representation of line %d is:\n", i + 1);
-      print_binary_bits(binary_lines[i]);
   }
 
   FILE* output = fopen(argv[2], "wb+");
@@ -621,15 +517,10 @@ int main(int argc, char **argv) {
 		perror("Could not open output file.");
 		exit(EXIT_FAILURE);
 	}
-  printf("\nOpened output file \"%s\" successfully\n", argv[2]);
 
   // Writes binary_lines to output file
   write_to_binary_file(output, binary_lines, ntokenlines, token_lines);
 
-  // TEMPORARY Prints lines for testing
-  print_lines(token_lines, binary_lines, ntokenlines);
-
   fclose(output);
-  printf("\nAssembly completed successfully!\n");
   return EXIT_SUCCESS;
 }

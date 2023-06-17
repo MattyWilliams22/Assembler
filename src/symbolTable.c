@@ -79,14 +79,10 @@ void free_table(Symbol_Table *table) {
 
 // Sets address of a single dependency
 void set_address(Node_t node, int index, token_line *lines) {
-  printf("\nLine of label is %d\n", node.address);
-  int dep = node.dependencies[index];
-  operand *dep_operand = &lines[dep].operands[lines[dep].operand_count - 1];
-  printf("Line of dependency is %d\n", dep);
-  int offset = (node.address - dep);
-  printf("Offset is %d\n", offset);
-  sprintf(dep_operand->word, "%d", offset);
-  printf("Dependency in line %d, now has value: \"%s\"\n", dep, dep_operand->word);
+  int dependency_line = node.dependencies[index];
+  int offset = (node.address - dependency_line);
+  operand *dependent_operand = &lines[dependency_line].operands[lines[dependency_line].operand_count - 1];
+  sprintf(dependent_operand->word, "%d", offset);
 }
 
 // Set address of all dependencies of a node
@@ -151,7 +147,6 @@ void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, tok
 
 // Add address to symbol table
 void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines) {
-  printf("Label: \"%s\" points to line number: %d\n", label, line_no);
   // Remove ':' from end of string
   int length = strlen(label);
   label[length - 1] = '\0';
