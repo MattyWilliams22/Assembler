@@ -1,13 +1,13 @@
 #include <stdbool.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "assemble.h"
 #include "assembleutils.h"
-#include "symbolTable.h"
 #include "tokenizer.h"
 
-#define HALT 0x8a000000
+#define HALTINSTR 0x8a000000
 #define NOOP 0xd503201f
 
 AssembleMapping assembleMappings[] = {
@@ -26,35 +26,48 @@ AssembleMapping assembleMappings[] = {
     {MOVK, &assemble_DP, 0x3},
     {MOVN, &assemble_DP, 0x0},
     {MOVZ, &assemble_DP, 0x2},
+    {MADD, &assemble_DP, 0x0},
+    {MSUB, &assemble_DP, 0x0},
+    {B, &assemble_B, 0x0},
+    {BCOND, &assemble_B, 0x0},
+    {BR, &assemble_B, 0x0},
+    {STR, &assemble_SDT, 0x0},
+    {LDR, &assemble_SDT, 0x0},
+    {LDRLIT, &assemble_SDT, 0x0},
+    {NOP, &assemble_SP, 0x0},
+    {HALT, &assemble_SP, 0x0},
+    {DIR, &assemble_SP, 0x0}
 };
 
 // Sets bits in given binary to the given value
 binary set_bits(binary input, int start, int end, binary value) {
   binary mask = 0;
   for (int i = start; i <= end; i++) {
-    mask = mask | (1 << i);
+    mask = mask | (binary) 1 << i;
   }
-  return (input & ~mask) | ((value << start) && mask);
+  return (input & ~mask) | ((value << start) & mask);
 }
 
 // Applies the shift to the binary input
 binary convert_SHIFT(operand op) {
+  binary result;
   if (op.word[0] == 'l') {
     // lsl or lsr
     if (op.word[2] == 'l') {
       // lsl
-      return 0x0;
+      result = 0x0;
     } else {
       // lsr
-      return 0x1;
+      result = 0x1;
     }
   } else if (op.word[0] == 'a') {
     // asr
-    return 0x2;
+    result = 0x2;
   } else {
     // ror
-    return 0x3;
+    result = 0x3;
   }
+  return result;
 }
 
 // Converts an opcode to its binary representation
@@ -69,6 +82,11 @@ binary convert_OPCODE(opcode_name name) {
 
 // Converts a register to its binary representation
 binary convert_REG(operand op) {
+  // Converts zero register to register 32
+  if (op.word[1] == 'z') {
+    op.word[1] = '3';
+    op.word[2] = '1';
+  }
   return atoi(&op.word[1]);
 }
 
@@ -77,10 +95,9 @@ binary convert_IMM(operand op) {
   if (op.word[0] == '#') {
     op.word = &op.word[1];
   }
-
   if (op.word[0] == '0' && op.word[1] == 'x') {
     // hex
-    return (int)strtol(&op.word[2], NULL, 16);
+    return (binary) strtol(&op.word[2], NULL, 16);
   } else {
     // decimal
     return atoi(op.word);
@@ -128,7 +145,6 @@ binary convert_COND(operand op) {
       // al
       return 0xe;
     default:
-      // error
       return 0xf;
   }
 }
@@ -140,7 +156,7 @@ binary convert_ADDR_MODE(operand op, addressing_mode mode) {
     result = set_bits(result, 6, 10, convert_REG(op));
     result = set_bits(result, 0, 5, 0x1a);
   } else if (mode == UNSIGNED_OFF) {
-    result = convert_IMM(op);
+    result = convert_IMM(op) / 8;
   } else {
     result = set_bits(result, 11, 11, 0);
     result = set_bits(result, 2, 10, convert_IMM(op));
@@ -156,7 +172,6 @@ binary convert_ADDR_MODE(operand op, addressing_mode mode) {
 // Data Processing Instruction Assembler
 binary assemble_DP(token_line line) {
   binary result = 0;
-
   // Set bit 31 to register access mode
   if (line.operands[0].word[0] == 'x') {
     result = set_bits(result, 31, 31, 1);
@@ -165,7 +180,7 @@ binary assemble_DP(token_line line) {
   }
 
   // Immediate
-  if (line.operands[2].type != REG) {
+  if (line.operands[1].type == IMM || (line.operand_count > 2 && line.operands[2].type == IMM)) {
     // Set bits 30 to 29 as value of opcode
     result = set_bits(result, 29, 30, convert_OPCODE(line.opcode));
     // Set bits 28 to 26 as 100
@@ -176,9 +191,9 @@ binary assemble_DP(token_line line) {
       // Set bits 20 to 5 as imm16
       result = set_bits(result, 5, 20, convert_IMM(line.operands[1]));
       // Set bits 22 to 21 as hw (shift left by hw * 16 bits)
-      if (line.operands[2].type == SHIFT) {
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
         // Do I need to divide by 16? 
-        result = set_bits(result, 21, 22, get_shift_amount(line.operands[2]) / 16);
+        result = set_bits(result, 21, 22, get_shift_amount(line.operands[line.operand_count - 1]) / 16);
       }
       // Set bits 25 to 23 as opi
       result = set_bits(result, 23, 25, 0x5);
@@ -188,7 +203,7 @@ binary assemble_DP(token_line line) {
       // Set bits 21 to 10 as imm12
       result = set_bits(result, 10, 21, convert_IMM(line.operands[2]));
       // Set bit 22 as sh
-      if (line.operands[3].type == SHIFT && get_shift_amount(line.operands[3]) == 0xc) {
+      if (line.operands[line.operand_count - 2].type == SHIFT && get_shift_amount(line.operands[line.operand_count - 1]) == 0xc) {
         result = set_bits(result, 22, 22, 1);
       }
       // Set bits 25 to 23 as opi
@@ -215,12 +230,17 @@ binary assemble_DP(token_line line) {
       result = set_bits(result, 28, 28, 0);
       // Set bit 24 as 1
       result = set_bits(result, 24, 24, 1);
-      // Set bits 23 to 22 as shift type
-      result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
+
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
+        // Set bits 23 to 22 as shift type
+        result = set_bits(result, 22, 23, convert_SHIFT(line.operands[line.operand_count - 2])); 
+        // Set bits 15 to 10 as shift amount
+        result = set_bits(result, 10, 15, get_shift_amount(line.operands[line.operand_count - 1]));      
+      }
+      
       // Set bit 21 as 0
       result = set_bits(result, 21, 21, 0);
-      // Set bits 15 to 10 as shift amount
-      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
+      
     } else if (line.opcode == MADD || line.opcode == MSUB) {
       // Multiply
 
@@ -241,14 +261,18 @@ binary assemble_DP(token_line line) {
       result = set_bits(result, 28, 28, 0);
       // Set bit 24 as 1
       result = set_bits(result, 24, 24, 0);
-      // Set bits 23 to 22 as shift type
-      result = set_bits(result, 22, 23, convert_SHIFT(line.operands[3]));
+
+      if (line.operands[line.operand_count - 2].type == SHIFT) {
+        // Set bits 23 to 22 as shift type
+        result = set_bits(result, 22, 23, convert_SHIFT(line.operands[line.operand_count - 2])); 
+        // Set bits 15 to 10 as shift amount
+        result = set_bits(result, 10, 15, get_shift_amount(line.operands[line.operand_count - 1]));      
+      }
+
       // Set bit 21 as N
       if (line.opcode == BIC || line.opcode == ORN || line.opcode == EON || line.opcode == BICS) {
         result = set_bits(result, 21, 21, 1);
       }
-      // Set bits 15 to 10 as shift amount
-      result = set_bits(result, 10, 15, get_shift_amount(line.operands[4]));
     }
   }
   return result;
@@ -262,7 +286,11 @@ binary assemble_B(token_line line) {
     // Set bits 31 to 26 to 000101
     result = set_bits(result, 26, 31, 0x5);
     // Set bits 25 to 0 to the value of the literal
-    result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
+    if (line.operands[0].type == LABEL) {
+      result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
+    } else { 
+      result = set_bits(result, 0, 25, convert_IMM(line.operands[0]) / 4);
+    }
   } else if (line.opcode == BR) {
     // Register
     // Set bits 31 to 10 to 1101011000011111000000
@@ -278,52 +306,81 @@ binary assemble_B(token_line line) {
     // Set bits 4 to 0 to cond
     result = set_bits(result, 0, 4, convert_COND(line.operands[0]));
     // Set bits 23 to 5 to the value of the literal
-    result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
+    int value = convert_IMM(line.operands[1]);
+    if (value < 0) {
+      result = set_bits(result, 5, 23, value & 0x7ffff);
+    } else {
+      result = set_bits(result, 5, 23, value);
+    }
   }
   return result;
 }
 
+char *remove_first_char(char *str) {
+  char *result = strdup(&str[1]);
+  return result;
+}
+
+void remove_last_char(char *str) {
+  int end = strlen(str) - 1;
+  str[end] = '\0';
+}
+
 addressing_mode get_addressing_mode(token_line line) {
-  line.operands[1].word = &line.operands[1].word[1];
-  int length1 = strlen(line.operands[2].word);
-  if (line.operands[2].word[length1 - 1] == '!') {
-    // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
-    line.operands[2].word[length1 - 3] = '\0';
-    return PRE_IND;
-  } else if (line.operands[2].word[length1] != ']') {
-    // <Rt>, [<Xn>], #<simm>                     (Post-index)
-    line.operands[2].word[length1 - 2] = '\0';
-    return POST_IND;
-  } else if (line.operands[2].word[0] == '#') {
-    // <Rt>, [<Xn|SP>, #<imm>]                   (Unsigned Offset)
-    line.operands[2].word[length1 - 2] = '\0';
+  if (line.operand_count == 2) {
+    // rt, [xn]                Unsigned offset (2 operands)
+    line.operands[1].word = remove_first_char(line.operands[1].word);
+    remove_last_char(line.operands[1].word);
+    line.operand_count++;
+    line.operands[2].type = IMM;
+    line.operands[2].word = "#0";
+    // rt, xn, #0
     return UNSIGNED_OFF;
   } else {
-    // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
-    if (line.operand_count == 4) {
-    // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
-    int length2 = strlen(line.operands[3].word);
-    line.operands[3].word[length2 - 2] = '\0';
+    line.operands[1].word = remove_first_char(line.operands[1].word);
+    int length1 = strlen(line.operands[1].word);
+    int length2 = strlen(line.operands[2].word);
+    if (line.operands[2].word[length2 - 1] == '!') {
+      // rt, xn, #simm]!                    
+      remove_last_char(line.operands[2].word);
+      remove_last_char(line.operands[2].word);
+      // rt, xn, #simm 
+      return PRE_IND;
+    } else if (line.operands[1].word[length1 - 1] == ']') {
+      // rt, xn], #simm                     
+      remove_last_char(line.operands[1].word);
+      // rt, xn, #simm
+      return POST_IND;
+    } else if (line.operands[2].word[0] == '#') {
+      // rt, [xn, #imm]                                     
+      remove_last_char(line.operands[2].word);
+      // rt, xn, #imm
+      return UNSIGNED_OFF;
     } else {
-    // <Rt>, [<Xn>, <Rm>]
-    line.operands[2].word[length1 - 2] = '\0';
+      if (line.operand_count > 3) {
+        // rt, xn, xm, lsl #imm]                            
+        remove_last_char(line.operands[3].word);
+        // rt, xn, xm, lsl #imm
+      } else {
+        // rt, xn, xm]                                      
+        remove_last_char(line.operands[2].word);
+        // rt, xn, xm
+      }
+      return REG_OFF;
     }
-    return REG_OFF;
   }
 }
 
 // Single Data Transfer Instruction Assembler
 binary assemble_SDT(token_line line) {
   binary result = 0;
-
   // Set bit 31 to register access mode
   if (line.operands[0].word[0] == 'x') {
     result = set_bits(result, 30, 30, 1);
   } else {
     result = set_bits(result, 30, 30, 0);
   }
-
-  if (line.opcode == LDR && line.operand_count == 2) {
+  if (line.opcode == LDR && line.operand_count == 2 && line.operands[1].word[0] != '[') {
     // Load literal
     // Set bit 31 to 0
     result = set_bits(result, 31, 31, 0);
@@ -335,22 +392,19 @@ binary assemble_SDT(token_line line) {
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
   } else {
     // Single Data Transfer
-
     // Set bits 23 to 22 to 0L
     if (line.opcode == LDR) {
       result = set_bits(result, 22, 23, 1);
     } else {
       result = set_bits(result, 22, 23, 0);
     }
-
-     // Set bit 24 to U
+    // Set bit 24 to U
     addressing_mode mode = get_addressing_mode(line);
     if (mode == UNSIGNED_OFF) {
       result = set_bits(result, 24, 24, 1);
     } else {
       result = set_bits(result, 24, 24, 0);
     }
-
     // Set bit 31 to 1
     result = set_bits(result, 31, 31, 1);
     // Set bits 29 to 25 to 11100
@@ -373,7 +427,7 @@ binary assemble_SP(token_line line) {
     return convert_IMM(line.operands[0]);
   } else {
     // line.opcode == HALT
-    return HALT;
+    return HALTINSTR;
   }
 }
 
@@ -385,64 +439,54 @@ binary assemble_line(token_line line) {
       break;
     }
   }
-  return assemble_func(line);
+  binary result = assemble_func(line);
+  return result;
 }
 
 // Counts the number of lines of text in the file given by fp
 int count_lines(FILE *fp) {
   int count = 0;
-  char c;
-  for (c = getc(fp); c != EOF; c = getc(fp)) {
-    if (c == '\n') { 
-      count = count + 1; 
+  char line[100];
+
+  while ((fgets(line, sizeof(line), fp)) != NULL) {
+    // Remove trailing newline if there is one
+    if (line[strlen(line) - 1] == '\n') {
+      line[strlen(line) - 1] = '\0';
+    }
+
+    // Removes spaces
+    int start = 0;
+    while (isspace(line[start])) {
+      start++;
+    }
+
+    if (strlen(&line[start]) != 0) {
+      count += 1;
     }
   }
+  
   return count;
 }
 
 // Writes an array of binary to the file given by fp
-void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
+void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines, token_line *token_lines) {
   // Check if the file pointer is valid
   if (fp == NULL) {
-    printf("Invalid file pointer\n");
+    perror("Invalid file pointer\n");
     return;
   }
 
   // Check if the binary pointer is valid
   if (binary_lines == NULL) {
-    printf("Invalid binary_lines pointer\n");
+    perror("Invalid binary_lines pointer\n");
     return;
   }
 
   // Write the binary data to the file
   for (int i = 0; i < nlines; i++) {
-    fwrite(&binary_lines[i], sizeof(binary), 1, fp);
-  }
-}
-
-void print_token_line(token_line line) {
-  printf("| Opcode: %d | ", line.opcode);
-  for (int i = 0; i < line.operand_count; i++) {
-    printf("%s | ", line.operands[i].word);
-  }
-  printf("\n");
-}
-
-void print_binary_line(binary line) {
-  for (int i = 31; i >= 0; --i) {
-    printf("%u", line >> i & 1);
-  }
-  printf("\n");
-}
-
-void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
-  printf("Tokenised version of input:\n\n");
-  for (int i = 0; i < nlines; i++) {
-    print_token_line(token_lines[i]);
-  }
-  printf("Binary output:\n\n");
-  for (int i = 0; i < nlines; i++) {
-    print_binary_line(binary_lines[i]);
+    if (binary_lines[i] != 0 || token_lines[i].opcode == DIR) {
+      fwrite(&binary_lines[i], sizeof(binary), 1, fp);
+    }
   }
 }
 
@@ -456,29 +500,17 @@ int main(int argc, char **argv) {
 
   // Get number of lines in input file
   int nlines = count_lines(input);
+  rewind(input);
 
-  // Close file
-  fclose(input);
-
-  // Reopen file
-  FILE* fp = fopen(argv[1], "rt");
-	if (input == NULL) {
-		perror("Could not open input file.");
-		exit(EXIT_FAILURE);
-	}
-
+  int ntokenlines = 0;
   // Convert lines of file to an array of token_lines
-  token_array token_array = read_assembly(fp, nlines);
-
-  // Close file
-  fclose(fp);
+  token_line *token_lines = read_assembly(input, nlines, &ntokenlines);
 
   // Convert token_lines to binary_lines
-  binary binary_lines[token_array.line_count];
-  for (int i = 0; i < token_array.line_count; i++) {
-    binary_lines[i] = assemble_line(token_array.token_lines[i]);
+  binary binary_lines[ntokenlines];
+  for (int i = 0; i < ntokenlines; i++) {
+      binary_lines[i] = assemble_line(token_lines[i]);
   }
-
 
   FILE* output = fopen(argv[2], "wb+");
 	if (output == NULL) {
@@ -487,13 +519,8 @@ int main(int argc, char **argv) {
 	}
 
   // Writes binary_lines to output file
-  write_to_binary_file(output, binary_lines, token_array.line_count);
+  write_to_binary_file(output, binary_lines, ntokenlines, token_lines);
 
-  // Close file
   fclose(output);
-
-  // TEMPORARY Prints lines for testing
-  print_lines(token_array.token_lines, binary_lines, token_array.line_count);
-
   return EXIT_SUCCESS;
 }

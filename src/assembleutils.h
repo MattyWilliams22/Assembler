@@ -1,7 +1,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdio.h>
 #include <stdint.h>
 
 typedef enum {
@@ -32,6 +31,7 @@ typedef enum {
   IMM,
   SHIFT,
   COND,
+  LABEL,
   UNRECOGNISED_OPERAND
 } operand_type;
 
@@ -40,56 +40,24 @@ typedef struct {
   char *word;
 } operand;
 
-operand make_operand(operand_type type, char* word) {
-  operand new = malloc(sizeof(operand_type) + sizeof(char*));
-  assert (new != NULL);
-  new->type = type;
-  int length = strlen(word);
-  new->word = malloc(sizeof(char) * length); 
-}
-
-void free_operand(operand op) {
-  free(op.word[0]);
-  free(op.word);
-  free(op);
-}
-
 typedef struct {
   opcode_name opcode;
   operand *operands;
   int operand_count;
 } token_line;
 
-token_line make_token_line(opcode_name opcode, operand *operands, int op_count) {
-  token_line new = malloc(sizeof(opcode_name) + sizeof(operand*));
-  assert (new != NULL);
-  new->opcode = opcode;
-  new->operands = malloc((sizeof(operand_type) + sizeof(char*)) * op_count);
-}
-
-void free_token_line(token_line line) {
-  free(line.operands[0]);
-  free(line.operands);
-  free(line);
-}
-
 typedef struct {
   token_line *token_lines;
   int line_count;
 } token_array;
 
-token_array make_token_array(token_line *token_lines, int line_count) {
-  token_array new = malloc(sizeof(token_line*) + sizeof(int));
-  new->token_lines = malloc((sizeof(operand_type) + sizeof(char*)) * 6 * line_count);
-  new->line_count = line_count;
-}
-
-void free_token_array(token_array array) {
-  free(array.token_lines[0]);
-  free(array.token_lines);
-  free(array);
-}
-
 typedef uint32_t binary;
+
+operand *make_operand(operand_type type, char *word);
+void free_operand(operand *op);
+token_line *make_token_line(opcode_name opcode, int op_count, operand* operands);
+void free_token_line(token_line *line);
+token_array *make_token_array(int line_count);
+void free_token_array(token_array *array);
 
 #endif
