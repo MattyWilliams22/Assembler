@@ -320,7 +320,11 @@ binary assemble_B(token_line line) {
     // Set bits 31 to 26 to 000101
     result = set_bits(result, 26, 31, 0x5);
     // Set bits 25 to 0 to the value of the literal
-    result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
+    if (line.operands[0].type == LABEL) {
+      result = set_bits(result, 0, 25, convert_IMM(line.operands[0]));
+    } else { 
+      result = set_bits(result, 0, 25, convert_IMM(line.operands[0]) / 4);
+    }
   } else if (line.opcode == BR) {
     // Register
     // Set bits 31 to 10 to 1101011000011111000000

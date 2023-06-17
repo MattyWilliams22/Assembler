@@ -217,12 +217,12 @@ void get_types_mul(operand *operands, int op_count) {
 
 void get_types_b(operand *operands, int op_count) {
   // <literal>      (IMM or imm)
-  if (operands[0].word[0] == '#') {
+  if (isdigit(operands[0].word[0])) {
     // <imm>
     operands[0].type = IMM;
   } else {
     // <label>
-    operands[0].type = IMM;
+    operands[0].type = LABEL;
   }
 }
 

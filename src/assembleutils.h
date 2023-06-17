@@ -31,6 +31,7 @@ typedef enum {
   IMM,
   SHIFT,
   COND,
+  LABEL,
   UNRECOGNISED_OPERAND
 } operand_type;
 
