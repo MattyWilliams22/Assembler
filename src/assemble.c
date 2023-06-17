@@ -45,7 +45,7 @@ binary set_bits(binary input, int start, int end, binary value) {
   for (int i = start; i <= end; i++) {
     mask = mask | (binary) 1 << i;
   }
-  return (input & ~mask) | (value << start);
+  return (input & ~mask) | ((value << start) & mask);
 }
 
 // Applies the shift to the binary input
@@ -429,19 +429,24 @@ binary assemble_SDT(token_line line) {
   } else {
     result = set_bits(result, 30, 30, 0);
   }
-
-  
+  printf("\nChecking for literal case:\n");
+  printf("Opcode is %d\n", line.opcode);
+  printf("Operand count is %d\n", line.operand_count);
+  printf("Operand 2 is \"%s\"\n", line.operands[1].word);
   if (line.opcode == LDR && line.operand_count == 2 && line.operands[1].word[0] != '[') {
+    printf("Load Literal\n");
     // Load literal
     // Set bit 31 to 0
     result = set_bits(result, 31, 31, 0);
     // Set bits 29 to 24 to 011000
     result = set_bits(result, 24, 29, 0x18);
     // Set bits 23 to 5 to simm19
+    printf("imm has value %x\n", convert_IMM(line.operands[1]));
     result = set_bits(result, 5, 23, convert_IMM(line.operands[1]));
     // Set bits 4 to 0 to rt
     result = set_bits(result, 0, 4, convert_REG(line.operands[0]));
   } else {
+    printf("Single Data Transfer\n");
     // Single Data Transfer
 
     // Set bits 23 to 22 to 0L
@@ -535,7 +540,7 @@ int count_lines(FILE *fp) {
 }
 
 // Writes an array of binary to the file given by fp
-void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
+void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines, token_line *token_lines) {
   // Check if the file pointer is valid
   if (fp == NULL) {
     printf("Invalid file pointer\n");
@@ -550,7 +555,7 @@ void write_to_binary_file(FILE *fp, binary *binary_lines, int nlines) {
 
   // Write the binary data to the file
   for (int i = 0; i < nlines; i++) {
-    if (binary_lines[i] != 0) {
+    if (binary_lines[i] != 0 || token_lines[i].opcode == DIR) {
       fwrite(&binary_lines[i], sizeof(binary), 1, fp);
     }
   }
@@ -575,7 +580,7 @@ void print_lines(token_line *token_lines, binary *binary_lines, int nlines) {
   }
   printf("\nBinary output:\n\n");
   for (int i = 0; i < nlines; i++) {
-    if (binary_lines[i] != 0) {
+    if (binary_lines[i] != 0 || token_lines[i].opcode == DIR) {
       print_binary_bits(binary_lines[i]);
     }
   }
@@ -603,8 +608,8 @@ int main(int argc, char **argv) {
   for (int i = 0; i < ntokenlines; i++) {
       printf("\nAssembling line %d\n", i + 1);
       binary_lines[i] = assemble_line(token_lines[i]);
-      printf("The binary representation of line %d is:\n", i);
-      print_binary_bits(binary_lines[i - 1]);
+      printf("The binary representation of line %d is:\n", i + 1);
+      print_binary_bits(binary_lines[i]);
   }
 
   FILE* output = fopen(argv[2], "wb+");
@@ -615,7 +620,7 @@ int main(int argc, char **argv) {
   printf("\nOpened output file \"%s\" successfully\n", argv[2]);
 
   // Writes binary_lines to output file
-  write_to_binary_file(output, binary_lines, ntokenlines);
+  write_to_binary_file(output, binary_lines, ntokenlines, token_lines);
 
   // TEMPORARY Prints lines for testing
   print_lines(token_lines, binary_lines, ntokenlines);
