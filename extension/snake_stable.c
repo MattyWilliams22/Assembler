@@ -4,9 +4,8 @@
 #include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
-#include <stdbool.h>
 
-#define TICKDELAY 100000.0
+#define TICKDELAY 100.0
 #define WIDTH 20
 #define HEIGHT 20
 #define UP 'w'
@@ -147,93 +146,16 @@ void input() {
   }
 }
 
-bool isSafe(int grid[HEIGHT][WIDTH], int row, int col) {
-  return (row >= 0 && row < HEIGHT && col >= 0 && col < WIDTH && grid[row][col] == 0);
-}
-
-void bfs(int grid[HEIGHT][WIDTH], int srcRow, int srcCol, int destRow, int destCol, int* nextMoveRow, int* nextMoveCol) {
-  int dx[] = {0, 0, -1, 1};
-  int dy[] = {-1, 1, 0, 0};
-  
-  bool visited[HEIGHT][WIDTH];
-  for (int i = 0; i < HEIGHT; i++) {
-    for (int j = 0; j < WIDTH; j++) {
-      visited[i][j] = false;
-    }
-  }
-
-  int queue[HEIGHT * WIDTH];
-  int front = 0, rear = 0;
-
-  visited[srcRow][srcCol] = true;
-  queue[rear++] = srcRow * WIDTH + srcCol;
-
-  int parent[HEIGHT][WIDTH];
-  for (int i = 0; i < HEIGHT; i++) {
-    for (int j = 0; j < WIDTH; j++) {
-      parent[i][j] = -1;
-    }
-  }
-
-  while (front != rear) {
-    int currRow = queue[front] / WIDTH;
-    int currCol = queue[front] % WIDTH;
-    front++;
-
-    if (currRow == destRow && currCol == destCol) {
-      break;
-    }
-
-    for (int i = 0; i < 4; i++) {
-      int newRow = currRow + dx[i];
-      int newCol = currCol + dy[i];
-      if (isSafe(grid, newRow, newCol) && !visited[newRow][newCol]) {
-        visited[newRow][newCol] = true;
-        queue[rear++] = newRow * WIDTH + newCol;
-        parent[newRow][newCol] = currRow * WIDTH + currCol;
-      }
-    }
-  }
-
-  int currRow = destRow;
-  int currCol = destCol;
-  while (parent[currRow][currCol] != -1) {
-    int prevRow = parent[currRow][currCol] / WIDTH;
-    int prevCol = parent[currRow][currCol] % WIDTH;
-    currRow = prevRow;
-    currCol = prevCol;
-  }
-
-  *nextMoveRow = currRow;
-  *nextMoveCol = currCol;
-}
-
 void autonomous() {
-  int grid[HEIGHT][WIDTH];
-  for (int i = 0; i < HEIGHT; i++) {
-    for (int j = 0; j < WIDTH; j++) {
-      grid[i][j] = 0;
-    }
-  }
-
-  for (int i = 0; i < nTail; i++) {
-    grid[tailY[i]][tailX[i]] = 1;
-  }
-
-  grid[y][x] = -1;
-  grid[fruitY][fruitX] = -1;
-
-  int nextMoveRow, nextMoveCol;
-  bfs(grid, y, x, fruitY, fruitX, &nextMoveRow, &nextMoveCol);
-
-  if (nextMoveRow < y) {
-    flag = 1;
-  } else if (nextMoveRow > y) {
-    flag = 2;
-  } else if (nextMoveCol < x) {
-    flag = 3;
-  } else if (nextMoveCol > x) {
-    flag = 4;
+  // Simple heuristic to determine the direction towards the fruit
+  if (fruitX < x && flag != 4) {
+    flag = 3;  // Move left
+  } else if (fruitX > x && flag != 3) {
+    flag = 4;  // Move right
+  } else if (fruitY < y && flag != 2) {
+    flag = 1;  // Move up
+  } else if (fruitY > y && flag != 1) {
+    flag = 2;  // Move down
   }
 }
 
@@ -267,81 +189,81 @@ void logic() {
     default:
       break;
   }
-
-  if (mode == AUTONOMOUS_MODE) {
-    autonomous();
-  }
-
-  if (x >= WIDTH) {
-    x = 0;
-  } else if (x < 0) {
+  if (x == -1) {
     x = WIDTH - 1;
+  } else if (x == WIDTH) {
+    x = 0;
   }
-
-  if (y >= HEIGHT) {
-    y = 0;
-  } else if (y < 0) {
+  if (y == -1) {
     y = HEIGHT - 1;
+  } else if (y == HEIGHT) {
+    y = 0;
   }
-
   for (int i = 0; i < nTail; i++) {
     if (tailX[i] == x && tailY[i] == y) {
       gameover = 1;
       break;
     }
   }
-
   if (x == fruitX && y == fruitY) {
     score += 10;
-    fruitX = rand() % WIDTH;
-    fruitY = rand() % HEIGHT;
-    nTail++;
-  }
-}
-
-void check_gameover() {
-  if (gameover) {
-    system("clear");
-    printf("Game Over!\n");
-    if (score > highscore) {
-      highscore = score;
-      printf("New Highscore: %d\n", highscore);
-    } else {
-      printf("Score: %d\n", score);
-      printf("Highscore: %d\n", highscore);
-    }
-    printf("Press 'r' to restart or 'x' to exit\n");
-    while (1) {
-      if (keyboard_event()) {
-        char key = getchar();
-        if (key == 'r') {
-          setup();
-          break;
-        } else if (key == 'x') {
-          exit(0);
+    int touchesSnake;
+    do {
+      touchesSnake = 0;
+      fruitX = rand() % WIDTH;
+      fruitY = rand() % HEIGHT;
+      for (int i = 0; i < nTail; i++) {
+        if (fruitX == tailX[i] && fruitY == tailY[i]) {
+          touchesSnake = 1;
         }
       }
-    }
+    } while (touchesSnake);
+    draw();
+    nTail++;
+  } else {
+    draw();
   }
 }
 
 int main() {
   srand(time(0));
-  printf("Select the mode of operation:\n");
-  printf("0. Manual Mode\n");
-  printf("1. Autonomous Mode\n");
-  printf("Enter your choice: ");
-  scanf("%d", &mode);
-
-  while (getchar() != '\n') continue;  // Clear input buffer
   highscore = 0;
-  setup();
-  while (1) {
+  int exitProgram = 0;
+  while (!exitProgram) {
+    printf("Select the mode of operation:\n");
+    printf("0. Manual Mode\n");
+    printf("1. Autonomous Mode\n");
+    printf("Enter your choice: ");
+    scanf("%d", &mode);
+
+    while (getchar() != '\n') continue;  // Clear input buffer
+
+    setup();
     draw();
-    input();
-    logic();
-    check_gameover();
-    usleep(get_tick_speed());
+    while (!gameover) {
+      if (mode == MANUAL_MODE) {
+        input();
+      } else if (mode == AUTONOMOUS_MODE) {
+        autonomous();
+      }
+      logic();
+      usleep(get_tick_speed()); // Delay controls speed of game
+    }
+    printf("\nGame Over!\n");
+    printf("Your final score was %d\n", score);
+    if (score > highscore) {
+      highscore = score;
+      printf("New Highscore!\n");
+    } else {
+      printf("The highscore is: %d\n", highscore);
+    }
+    char response;
+    printf("Do you want to play another game? (y/n)\n");
+    scanf(" %c", &response);
+    if (response != 'y') {
+      exitProgram = 1;
+    }
   }
+
   return 0;
 }
