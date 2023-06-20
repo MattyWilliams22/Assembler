@@ -8,9 +8,8 @@
 
 Symbol_Table *label_table;
 
-// get_types_... functions get the types of every operand in the line
-// They are grouped by operand pattern as seen in table 2
-
+// A mapping of Assembly instructions to the function that retrieves and assigns the types of
+// of there operands
 InstructionMapping instructionMappings[] = {
     {"add", ADD, &get_types_add},
     {"adds", ADDS, &get_types_add},
@@ -47,6 +46,15 @@ InstructionMapping instructionMappings[] = {
     {".int", DIR, &get_types_dir},
 };
 
+/**
+ * Given an assembly instruction, if the assembly instruction is not supported by our assembler,
+ * the function modifies the instruction into a different instructions which performs the same
+ * function.
+ *
+ * @param line The assembly instruction to potentially convert if necessary into an alternate instruction
+ * @return Either the original instruction that was input or an alternative version supported by our
+ *         assembler if necessary
+ */
 token_line alias(token_line line) {
   int zr_pos = -1;
   if (line.opcode == CMP) {
@@ -95,6 +103,13 @@ token_line alias(token_line line) {
   return line;
 }
 
+/**
+ * Given an array of operands of an ADD, ADDS, SUB or SUBS instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_add(operand *operands, int op_count) {
   operands[0].type = REG;
   operands[1].type = REG;
@@ -117,6 +132,13 @@ void get_types_add(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of a CMP, CMN, NEG, NEGS instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_cmp(operand *operands, int op_count) {
   operands[0].type = REG;
   if (operands[1].word[0] == '#') {
@@ -140,6 +162,13 @@ void get_types_cmp(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of an AND, ANDS, BIC, BICS, EOR, ORR, EON or ORN instruction, 
+ * assigns each operand its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_and(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>, <shift> #<imm>
   operands[0].type = REG;
@@ -148,6 +177,13 @@ void get_types_and(operand *operands, int op_count) {
   operands[3].type = SHIFT;
 }
 
+/**
+ * Given an array of operands of a TST instruction, assigns each operand its type based on its value. 
+ * Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_tst(operand *operands, int op_count) {
   // <Rn>, <Rm>{, <shift> #<imm>}
   operands[0].type = REG;
@@ -160,6 +196,13 @@ void get_types_tst(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of a MOVK, MOVN or MOVZ instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_movx(operand *operands, int op_count) {
   // <Rd>, #<imm>{, lsl #<imm>}
   operands[0].type = REG;
@@ -172,12 +215,26 @@ void get_types_movx(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of a MOV instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_mov(operand *operands, int op_count) {
   // <Rd>, <Rn>
   operands[0].type = REG;
   operands[1].type = REG;
 }
 
+/**
+ * Given an array of operands of an MVN instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_mvn(operand *operands, int op_count) {
   // <Rd>, <Rm>{, <shift> #<imm>}
   operands[0].type = REG;
@@ -191,6 +248,13 @@ void get_types_mvn(operand *operands, int op_count) {
 }
   
 
+/**
+ * Given an array of operands of an MADD or MSUB instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_madd(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>, <Ra>
   operands[0].type = REG;
@@ -199,6 +263,13 @@ void get_types_madd(operand *operands, int op_count) {
   operands[3].type = REG;
 }
 
+/**
+ * Given an array of operands of a MUL or MNEG instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_mul(operand *operands, int op_count) {
   // <Rd>, <Rn>, <Rm>
   operands[0].type = REG;
@@ -206,6 +277,13 @@ void get_types_mul(operand *operands, int op_count) {
   operands[2].type = REG;
 }
 
+/**
+ * Given an array of operands of a B instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_b(operand *operands, int op_count) {
   // <literal>      (IMM or imm)
   if (isdigit(operands[0].word[0])) {
@@ -217,6 +295,13 @@ void get_types_b(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of a B. instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_bcond(operand *operands, int op_count) {
   // <cond>, <literal>
   operands[0].type = COND;
@@ -229,11 +314,25 @@ void get_types_bcond(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of a BR instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_br(operand *operands, int op_count) {
   // <Xn>
   operands[0].type = REG;
 }
 
+/**
+ * Given an array of operands of a STR instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_str(operand *operands, int op_count) {
   // Need to deal with [] somehow!
 
@@ -263,6 +362,13 @@ void get_types_str(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of an LDR instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_ldr(operand *operands, int op_count) {
   // <Rt>, <literal>
   operands[0].type = REG;
@@ -275,16 +381,38 @@ void get_types_ldr(operand *operands, int op_count) {
   }
 }
 
+/**
+ * Given an array of operands of a DIR instruction, assigns each operand 
+ * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_dir(operand *operands, int op_count) {
   // <simm>
   operands[0].type = IMM;
 }
 
+/**
+ * Given an array of operands of an NOP instruction, assigns each operand 
+ * its type based on its value. Since the NOP instruction has no operands, this function
+ * does nothing.
+ *
+ * @param operands The array of operands which are meant to be processed
+ * @param op_count The number of operands passed
+ */
 void get_types_null(operand *operands, int op_count) {
   // Do nothing
 }
 
-// Checks if the instruction is the halt instruction (and x0, x0, x0)
+/**
+ * Check if the given instruction is a HALT instruction (AND x0 x0 x0).
+ *
+ * @param opcode The opcode of the given instruction
+ * @param operands The array of operands of the instruction 
+ * @param op_count The number of operands passed
+ * @return True iff the instruction is a HALT instruction, else False
+ */
 bool is_halt(opcode_name opcode, operand *operands, int op_count) {
   if (opcode == AND && op_count == 3) {
     if (strcmp(operands[0].word, "x0") == 0 
@@ -296,11 +424,22 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
   return false;
 }
 
-// Converts a line of text into a token_line
+/**
+ * Given a line including an Assembly Instruction, parses the line to extract
+ * all details of the instruction and creates a token line consisting of the opcode
+ * of the instruction and all of its operands and its types.
+ *
+ * @param line The line containing the assembly instruction to be processed
+ * @param line_no The number of the current line being processed
+ * @param lines An array consisting all of the lines that have been processed so far
+ * @return The token_line generated from the given line
+ */
 token_line *process_line(char *line, int line_no, token_line *lines) {
   int string_count = 0;
   char *strings[10];
 
+  // While loop to remove all whitespaces from within the given line
+  // and to split up the line into its separate segments based on commas and white spaces
   while (*line != '\0') {  
     while (isspace(*line) || *line == ',') {
       line++;
@@ -360,6 +499,7 @@ token_line *process_line(char *line, int line_no, token_line *lines) {
     current_operands[i].word = strings[i + 1];
   }
 
+  // Check if the given line is a Label 
   if (opcode == UNRECOGNISED_OPCODE) {
     int length = strlen(strings[0]) - 1;
     if (strings[0][length] == ':') {
@@ -369,6 +509,7 @@ token_line *process_line(char *line, int line_no, token_line *lines) {
     }
   }
 
+  // Check if the given instruction is a HALT instruction (AND x0 x0 x0)
   if (opcode == AND) {
     if (is_halt(opcode, current_operands, operand_count)) {
       opcode = HALT;
@@ -377,10 +518,12 @@ token_line *process_line(char *line, int line_no, token_line *lines) {
     }
   }
 
+  // Retrieve the types of the operands of the instruction
   if (has_function) {
     get_types(current_operands, operand_count);
   }
 
+  // Check if the final operand has a shift applied to it
   if (strcmp(current_operands[operand_count - 2].word, "lsl") == 0 ||\
   strcmp(current_operands[operand_count - 2].word, "lsr") == 0 ||\
   strcmp(current_operands[operand_count - 2].word, "asr") == 0 ||\
@@ -398,7 +541,15 @@ token_line *process_line(char *line, int line_no, token_line *lines) {
   return current_line; 
 }
 
-// Reads an assembly code file and processes the lines into a token_array
+/**
+ * Reads a file consisting of assembly code line by line and processes each line to produce
+ * an array of token lines.
+ *
+ * @param fp File pointer pointing to the beginning of the assembly file to read in
+ * @param nlines The number of lines in the file
+ * @param line_count The number of token lines that have been produced so far
+ * @return An array of token lines of all the lines within the assembly file
+ */
 token_line *read_assembly(FILE* fp, int nlines, int *line_count) {
   char line[100];
   token_line *lines = malloc(nlines * sizeof(token_line));
@@ -425,8 +576,12 @@ token_line *read_assembly(FILE* fp, int nlines, int *line_count) {
     }
     line[end_pos] = '\0';
 
+    // Make sure line isn't empty
     if (strlen(&line[start]) != 0) {
       token_line *current_line = process_line(&line[start], *line_count, lines);
+
+      // Don't add the line to the array if it is a LABEL or if its an UNRECOGNISED instructions
+      // as they are not instructions
       if (current_line->opcode != UNRECOGNISED_OPCODE && current_line->opcode != LABEL_OPCODE) {
         lines[*line_count] = *current_line;
         lines[*line_count] = alias(lines[*line_count]);
