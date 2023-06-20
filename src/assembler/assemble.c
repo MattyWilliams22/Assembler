@@ -59,8 +59,7 @@ binary set_bits(binary input, int start, int end, binary value) {
  * @return The new string, which is exactly as the input string but the first characters has been removed
  */
 char *remove_first_char(char *str) {
-  char *result = strdup(&str[1]);
-  return result;
+  return &str[1];
 }
 
 /**
