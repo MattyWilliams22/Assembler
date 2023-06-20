@@ -78,14 +78,17 @@ void free_table(Symbol_Table *table) {
 }
 
 // Sets address of a single dependency
-void set_address(Node_t node, int dependency_no) {
-  sprintf(node.dependencies[dependency_no].operand.word, "%d", (node.address - node.dependencies[dependency_no].line));
+void set_address(Node_t node, int index, token_line *lines) {
+  int dependency_line = node.dependencies[index];
+  int offset = (node.address - dependency_line);
+  operand *dependent_operand = &lines[dependency_line].operands[lines[dependency_line].operand_count - 1];
+  sprintf(dependent_operand->word, "%d", offset);
 }
 
 // Set address of all dependencies of a node
-void set_addresses(Symbol_Table *table, Node_t node) {
+void set_addresses(Symbol_Table *table, Node_t node, token_line *lines) {
   for (int i = 0; i < node.no_dependencies; i++) {
-    set_address(node, i);
+    set_address(node, i, lines);
   }
 }
 
@@ -114,17 +117,14 @@ void free_list_node(Node_t *node) {
 }
 
 // Add dependency to symbol table
-void add_dependency(Symbol_Table *table, Key label, operand op, int line_no) {
-  dependency d;
-  d.operand = op;
-  d.line = line_no;
+void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, token_line *lines) {
   if (exists_in_table(table, label)) {
     Node_t *node = find_in_table(table, label);
-    node->dependencies = realloc(node->dependencies, (node->no_dependencies + 1) * sizeof(dependency));
-    node->dependencies[node->no_dependencies] = d;
+    node->dependencies = realloc(node->dependencies, (node->no_dependencies + 1) * sizeof(int));
+    node->dependencies[node->no_dependencies] = line_no;
     node->no_dependencies++;
     if (node->address != -1) {
-      set_address(*node, (node->no_dependencies - 1));
+      set_address(*node, (node->no_dependencies - 1), lines);
     }
   } else {
     Node_t *new_node = make_list_node(label, -1, 1, NULL);
@@ -132,7 +132,7 @@ void add_dependency(Symbol_Table *table, Key label, operand op, int line_no) {
       perror("Error allocating memory to new_node in add_dependency");
       exit(EXIT_FAILURE);
     }
-    new_node->dependencies[0] = d;
+    new_node->dependencies[0] = line_no;
     if (table->head == NULL) {
       table->head = new_node;
     } else {
@@ -146,15 +146,14 @@ void add_dependency(Symbol_Table *table, Key label, operand op, int line_no) {
 }
 
 // Add address to symbol table
-void add_address(Symbol_Table *table, Key label, int line_no) {
+void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines) {
   // Remove ':' from end of string
   int length = strlen(label);
   label[length - 1] = '\0';
-
   if (exists_in_table(table, label)) {
     Node_t *node = find_in_table(table, label);
     node->address = line_no;
-    set_addresses(table, *node);
+    set_addresses(table, *node, lines);
   } else {
     Node_t *new_node = (Node_t *)malloc(sizeof(Node_t));
     new_node->label = label;

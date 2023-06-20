@@ -2,12 +2,13 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
-operand *make_operand(operand_type type) {
+operand *make_operand(operand_type type, char *word) {
   operand *new = malloc(sizeof(operand_type) + sizeof(char*));
   assert (new != NULL);
   new->type = type;
-  new->word = malloc(sizeof(char) * 15);
+  new->word = strdup(word);
   return new;
 }
 
@@ -16,11 +17,12 @@ void free_operand(operand *op) {
   free(op);
 }
 
-token_line *make_token_line(opcode_name opcode, int op_count) {
-  token_line *new = malloc(sizeof(opcode_name) + sizeof(operand*));
+token_line *make_token_line(opcode_name opcode, int op_count, operand *ops) {
+  token_line *new = malloc(sizeof(token_line));
   assert (new != NULL);
   new->opcode = opcode;
-  new->operands = malloc((sizeof(operand_type) + sizeof(char*)) * op_count);
+  new->operands = ops;
+  new->operand_count = op_count;
   return new;
 }
 

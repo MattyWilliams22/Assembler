@@ -17,7 +17,7 @@ typedef struct {
 typedef struct Node{
   Key label;
   Value address;
-  dependency *dependencies;
+  int *dependencies;
   int no_dependencies;
   struct Node *next;
 } Node_t;
@@ -28,11 +28,12 @@ typedef struct {
 } Symbol_Table;
 
 // Prototypes
-void add_dependency(Symbol_Table *table, Key label, operand op, int line_no);
-void add_address(Symbol_Table *table, Key label, int line_no);
-void set_addresses(Symbol_Table *table, Node_t node);
+void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, token_line *lines);
+void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines);
+void set_addresses(Symbol_Table *table, Node_t node, token_line *lines);
 void free_table(Symbol_Table *table);
 void free_list_node(Node_t *node);
 Node_t *make_list_node(Key label, Value address, int no_dependencies, Node_t *next);
+Node_t *find_in_table(Symbol_Table *table, Key key);
 
 #endif

@@ -31,6 +31,7 @@ typedef enum {
   IMM,
   SHIFT,
   COND,
+  LABEL,
   UNRECOGNISED_OPERAND
 } operand_type;
 
@@ -52,9 +53,9 @@ typedef struct {
 
 typedef uint32_t binary;
 
-operand *make_operand(operand_type type);
+operand *make_operand(operand_type type, char *word);
 void free_operand(operand *op);
-token_line *make_token_line(opcode_name opcode, int op_count);
+token_line *make_token_line(opcode_name opcode, int op_count, operand* operands);
 void free_token_line(token_line *line);
 token_array *make_token_array(int line_count);
 void free_token_array(token_array *array);

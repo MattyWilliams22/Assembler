@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -5,7 +6,6 @@
 #include "tokenizer.h"
 #include "symbolTable.h"
 
-int line_count;
 Symbol_Table *label_table;
 
 // get_types_... functions get the types of every operand in the line
@@ -47,7 +47,7 @@ InstructionMapping instructionMappings[] = {
     {".int", DIR, &get_types_dir},
 };
 
-void alias(token_line line) {
+token_line alias(token_line line) {
   int zr_pos = -1;
   if (line.opcode == CMP) {
     line.opcode = SUBS;
@@ -73,8 +73,8 @@ void alias(token_line line) {
   } else if (line.opcode == MUL) {
     line.opcode = MADD;
     zr_pos = 3;
-  } else if (line.opcode == MSUB) {
-    line.opcode = ORR;
+  } else if (line.opcode == MNEG) {
+    line.opcode = MSUB;
     zr_pos = 3;
   }
   if (zr_pos != -1) {
@@ -82,10 +82,17 @@ void alias(token_line line) {
       line.operands[i] = line.operands[i-1];
     }
     line.operands[zr_pos].type = REG;
-    line.operands[zr_pos].word = "x32";
+
+    // Check if 32-bit or 64-bit access mode
+    if (line.operands[0].word[0] == 'w') {
+      line.operands[zr_pos].word = "w31";
+    } else {
+      line.operands[zr_pos].word = "x31";
+    }
     line.operand_count++;
   }
-  
+
+  return line;
 }
 
 void get_types_add(operand *operands, int op_count) {
@@ -138,7 +145,7 @@ void get_types_and(operand *operands, int op_count) {
   operands[0].type = REG;
   operands[1].type = REG;
   operands[2].type = REG;
-  operands[3].type = IMM;
+  operands[3].type = SHIFT;
 }
 
 void get_types_tst(operand *operands, int op_count) {
@@ -200,27 +207,25 @@ void get_types_mul(operand *operands, int op_count) {
 }
 
 void get_types_b(operand *operands, int op_count) {
-  // <literal>      (label_OPERAND or imm)
-  if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
+  // <literal>      (IMM or imm)
+  if (isdigit(operands[0].word[0])) {
     // <imm>
     operands[0].type = IMM;
   } else {
     // <label>
-    operands[0].type = IMM;
-    add_dependency(label_table, operands[0].word, operands[0], line_count);
+    operands[0].type = LABEL;
   }
 }
 
 void get_types_bcond(operand *operands, int op_count) {
   // <cond>, <literal>
   operands[0].type = COND;
-  if (operands[1].word[0] == '0' && operands[1].word[1] == 'x') {
+  if (operands[1].word[0] == '#') {
     // <cond>, <imm>
     operands[1].type = IMM;
   } else {
     // <cond>, <label>
     operands[1].type = IMM;
-    add_dependency(label_table, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -261,13 +266,12 @@ void get_types_str(operand *operands, int op_count) {
 void get_types_ldr(operand *operands, int op_count) {
   // <Rt>, <literal>
   operands[0].type = REG;
-  if (operands[0].word[0] == '0' && operands[0].word[1] == 'x') {
+  if (operands[0].word[0] == '#') {
     // <Rt>, <imm>
     operands[1].type = IMM;
   } else {
     // <Rt>, <label>
     operands[1].type = IMM;
-    add_dependency(label_table, operands[1].word, operands[1], line_count);
   }
 }
 
@@ -293,28 +297,46 @@ bool is_halt(opcode_name opcode, operand *operands, int op_count) {
 }
 
 // Converts a line of text into a token_line
-token_line process_line(char line[]) {
-  const char s[] = " "; 
-  const char d[] = ",";
-  char *instr_str = strtok(line, s);
+token_line *process_line(char *line, int line_no, token_line *lines) {
   int string_count = 0;
   char *strings[10];
 
-  while (instr_str != NULL) {
-    strings[string_count] = instr_str;
+  while (*line != '\0') {  
+    while (isspace(*line) || *line == ',') {
+      line++;
+    }
+
+    char *start = line;
+
+    while (*line != '\0' && !isspace(*line) && *line != ',') {
+      line++;
+    }
+
+    char ch = *line; // char beyond end of characters
+    *line = '\0'; // temporarily terminate string
+    strings[string_count] = strdup(start);
     string_count++;
-    instr_str = strtok(NULL, d);
+    *line = ch; // restore the original unused char
   }
 
-  // The strings need processing
-  // Could be:
-  // ["x0", " x0", " x0"]
-  // or ["x2", "lsl #12"]
-  // or ["x1", " [x3", "#5]!"]
+  // Removes a trailing empty string
+  if (strings[string_count - 1][0] == '\0') {
+    string_count--;
+  }
 
-  // Operand
+  // b.cond case
+  if (string_count > 0) {
+    if (strlen(strings[0]) > 1) {
+      if (strings[0][1] == '.') {
+        strings[2] = strings[1];
+        strings[1] = strdup(strings[0] + 2);
+        strings[0] = "b.";
+        string_count++;
+      }
+    }
+  }
+
   int operand_count = string_count - 1;
-
   func_ptr_type get_types;
   bool has_function = false;
   opcode_name opcode = UNRECOGNISED_OPCODE;
@@ -333,25 +355,25 @@ token_line process_line(char line[]) {
   }
 
   operand current_operands[operand_count];
-  token_line current_line;
 
   for (int i = 0; i < operand_count; i++) {
     current_operands[i].word = strings[i + 1];
   }
 
   if (opcode == UNRECOGNISED_OPCODE) {
-    int length = strlen(instr_str);
-    if (instr_str[length - 1] == ':') {
+    int length = strlen(strings[0]) - 1;
+    if (strings[0][length] == ':') {
       opcode = LABEL_OPCODE;
       get_types = &get_types_null;
-      add_address(label_table, current_operands[1].word, line_count);
+      add_address(label_table, strings[0], line_no, lines);
     }
   }
 
-  if(opcode == AND) {
-    if(is_halt(opcode, current_operands, operand_count)) {
+  if (opcode == AND) {
+    if (is_halt(opcode, current_operands, operand_count)) {
       opcode = HALT;
       get_types = &get_types_null;
+      operand_count = 0;
     }
   }
 
@@ -359,42 +381,68 @@ token_line process_line(char line[]) {
     get_types(current_operands, operand_count);
   }
 
-  current_line.opcode = opcode;
-  current_line.operands = current_operands;
-  current_line.operand_count = operand_count;
+  if (strcmp(current_operands[operand_count - 2].word, "lsl") == 0 ||\
+  strcmp(current_operands[operand_count - 2].word, "lsr") == 0 ||\
+  strcmp(current_operands[operand_count - 2].word, "asr") == 0 ||\
+  strcmp(current_operands[operand_count - 2].word, "ror") == 0) {
+    current_operands[operand_count - 2].type = SHIFT;
+    current_operands[operand_count - 1].type = IMM;
+  }
 
-  return current_line;
+  operand *operands = malloc(operand_count * sizeof(operand));
+  for (int i = 0; i < operand_count; i++) {
+    operands[i] = *make_operand(current_operands[i].type, current_operands[i].word);
+  }
+  token_line *current_line = make_token_line(opcode, operand_count, operands);
+
+  return current_line; 
 }
 
 // Reads an assembly code file and processes the lines into a token_array
-token_array read_assembly(FILE* fp, int nlines) {
+token_line *read_assembly(FILE* fp, int nlines, int *line_count) {
   char line[100];
-  token_array *array = make_token_array(nlines);
-  if (array == NULL) {
-    perror("Memory allocation of array failed in read_assembly");
-    fclose(fp);
-    exit(EXIT_FAILURE);
-  }
-  array->line_count = 0;
+  token_line *lines = malloc(nlines * sizeof(token_line));
   label_table = malloc(sizeof(Symbol_Table));
+  
   while ((fgets(line, sizeof(line), fp)) != NULL) {
     // Remove trailing newline if there is one
     if (line[strlen(line) - 1] == '\n') {
       line[strlen(line) - 1] = '\0';
     }
 
-    if (strlen(line) != 0) {
-      token_line current_line = process_line(line);
-      
-      if (current_line.opcode != UNRECOGNISED_OPCODE) {
-        array->token_lines[array->line_count] = current_line;
-        alias(array->token_lines[array->line_count]);
-        array->line_count++;
+    // Removes starting and trailing spaces from string
+    int start = 0;
+    while (isspace(line[start])) {
+      start++;
+    }
+    int end_pos = strlen(line);
+    while (end_pos >= 0) {
+      if (isspace(line[end_pos])) {
+        end_pos--;
+      } else {
+        break;
       }
     }
-    
+    line[end_pos] = '\0';
+
+    if (strlen(&line[start]) != 0) {
+      token_line *current_line = process_line(&line[start], *line_count, lines);
+      if (current_line->opcode != UNRECOGNISED_OPCODE && current_line->opcode != LABEL_OPCODE) {
+        lines[*line_count] = *current_line;
+        lines[*line_count] = alias(lines[*line_count]);
+        if (current_line->opcode == B && current_line->operands[0].word[0] != '#') {
+          add_dependency(label_table, current_line->operands[0].word, current_line->operands[0], *line_count, lines);
+        } else if (current_line->opcode == BCOND && current_line->operands[1].word[1] != '#') {
+          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], *line_count, lines);
+        } else if (current_line->opcode == LDR && current_line->operands[1].word[1] != '#') {
+          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], *line_count, lines);
+        }
+        (*line_count)++;
+      }
+    }
   }
+
   free_table(label_table);
   fclose(fp);
-  return *array;
+  return lines;
 }
