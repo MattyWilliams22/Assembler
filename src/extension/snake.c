@@ -5,6 +5,7 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include "maze.h"
 
 #define TICKDELAY 100000.0
 #define WIDTH 15
@@ -16,7 +17,8 @@
 
 enum Mode {
   MANUAL_MODE,
-  AUTONOMOUS_BFS_MODE  
+  AUTONOMOUS_BFS_MODE,
+  MAZE  
 };
 
 int score;
@@ -333,18 +335,46 @@ int main() {
   printf("Select the mode of operation:\n");
   printf("0. Manual Mode\n");
   printf("1. Autonomous BFS Mode\n");
+  printf("2. Generate DFS Maze\n");
   printf("Enter your choice: ");
   scanf("%d", &mode);
 
   while (getchar() != '\n') continue;  // Clear input buffer
-  highscore = 0;
-  setup();
-  while (1) {
-    draw();
-    input();
-    logic();
-    check_gameover();
-    usleep(get_tick_speed());
+
+  if (mode == MAZE) {
+    printf("Press 'r' to make maze or 'x' to exit\n");
+    while (1) {
+      if (keyboard_event()) {
+        char key = getchar();
+        if (key == 'r') {
+          printf("Enter maze height: ");
+          int height;
+          scanf("%d", &height);
+          printf("Enter maze width: ");
+          int width;
+          scanf("%d", &width);
+          printf("Enter maze size: ");
+          int size;
+          scanf("%d", &size);
+          Component **grid = allocate_grid(height, width, size);
+          make_maze(size, height, width, grid);
+          free_grid(grid, height, size);
+          break;
+        } else if (key == 'x') {
+          exit(0);
+        }
+      }
+    }
+  } else {
+    highscore = 0;
+    setup();
+    while (1) {
+      draw();
+      input();
+      logic();
+      check_gameover();
+      usleep(get_tick_speed());
+    }
   }
   return 0;
 }
