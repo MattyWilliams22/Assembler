@@ -13,6 +13,11 @@ typedef struct {
 
 void setup_grid(int size, int height, int width, Component **grid);
 void make_maze(int size, int height, int width, Component **grid);
-void draw_grid(Component **grid, int height, int width, int size);
-Component **allocate_grid(int height, int width, int size);
-void free_grid(Component **grid, int height, int size);
+Component **allocate_maze_grid(int height, int width, int size);
+Component **allocate_default_grid(int gridHeight, int gridWidth);
+void free_maze_grid(Component **grid, int height, int size);
+void free_default_grid(Component **grid, int gridHeight);
+int get_grid_height(int height, int size);
+int get_grid_width(int width, int size);
+void draw_maze_grid(Component **grid, int height, int width, int size, int nTail, int score);
+void draw_default_grid(Component **grid, int gridHeight, int gridWidth, int nTail, int score);

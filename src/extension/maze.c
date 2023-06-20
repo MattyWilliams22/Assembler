@@ -3,8 +3,50 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include "maze.h"
+#include "snake.h"
 
 #define MAZEDELAY 100000
+
+void draw_default_grid(Component **grid, int gridHeight, int gridWidth, int nTail, int score) {
+    system("clear");
+  if (nTail > 0) {
+    printf("Score: %d\n", score);
+  } else if (nTail == 0) {
+    printf("Welcome to snake!\n");
+  }
+  for (int i = 0; i < gridHeight; i++) {
+    for (int j = 0; j < gridWidth; j++) {
+      switch (grid[i][j]) {
+        case WALL:
+          printf("#");
+          break;
+        case HEAD:
+          printf("O");
+          break;
+        case TAIL:
+          printf("o");
+          break;
+        case FRUIT:
+          printf("X");
+          break;
+        case EMPTY:
+          printf(" ");
+          break;
+        default:
+          // U for undefined
+          printf("U");
+      }
+    }
+    printf("\n");
+  }
+  if (nTail == 0) {
+    printf("Use WASD or Arrow Keys to move\n");
+  }
+} 
+
+void draw_maze_grid(Component **grid, int height, int width, int size, int nTail, int score) {
+  draw_default_grid(grid, get_grid_height(height, size), get_grid_width(width, size), nTail, score);
+}
 
 int get_grid_height(int height, int size) {
     return height * (size + 1) + 1;
@@ -12,38 +54,6 @@ int get_grid_height(int height, int size) {
 
 int get_grid_width(int width, int size) {
     return width * (size + 1) + 1;
-}
-
-void draw_grid(Component **grid, int height, int width, int size) {
-    system("clear");
-    int gridHeight = get_grid_height(height, size);
-    int gridWidth = get_grid_width(width, size);
-    for (int i = 0; i < gridHeight; i++) {
-        for (int j = 0; j < gridWidth; j++) {
-            switch (grid[i][j]) {
-                case WALL:
-                    printf("#");
-                    break;
-                case HEAD:
-                    printf("O");
-                    break;
-                case TAIL:
-                    printf("o");
-                    break;
-                case FRUIT:
-                    printf("X");
-                    break;
-                case EMPTY:
-                    printf(" ");
-                    break;
-                default:
-                    // U for undefined
-                    printf("U");
-            }
-        }
-        printf("\n");
-    }
-    usleep(MAZEDELAY);
 }
 
 int get_valid_neighbours(Cell s, int height, int width, Cell *valid_neighbours, bool **visited) {
@@ -100,7 +110,8 @@ void connect_cells(Cell first, Cell second, Component **grid, int size, int heig
             }
         } 
     }
-    draw_grid(grid, height, width, size);
+    draw_maze_grid(grid, height, width, size, -1, -1);
+    usleep(MAZEDELAY);
 }
 
 void random_dfs(Cell root, Component **grid, bool **visited, int height, int width, int size) {
@@ -118,9 +129,11 @@ void random_dfs(Cell root, Component **grid, bool **visited, int height, int wid
     free(valid_neighbours);
 }
 
-Component **allocate_grid(int height, int width, int size) {
-    int gridHeight = get_grid_height(height, size);
-    int gridWidth = get_grid_width(width, size); 
+Component **allocate_maze_grid(int height, int width, int size) {
+    return allocate_default_grid(get_grid_height(height, size), get_grid_width(width, size));
+}
+
+Component **allocate_default_grid(int gridHeight, int gridWidth) {
     Component **grid;
     grid = malloc(gridHeight * sizeof(*grid));
     for (int i = 0; i < gridHeight; i++) {
@@ -129,8 +142,12 @@ Component **allocate_grid(int height, int width, int size) {
     return grid;
 }
 
-void free_grid(Component **grid, int height, int size) {
-    for (int i = 0; i < get_grid_height(height, size); i++) {
+void free_maze_grid(Component **grid, int height, int size) {
+    free_default_grid(grid, get_grid_height(height, size));
+}
+
+void free_default_grid(Component **grid, int gridHeight) {
+    for (int i = 0; i < gridHeight; i++) {
         free(grid[i]);
     }
     free(grid);
@@ -150,8 +167,9 @@ void setup_grid(int size, int height, int width, Component **grid) {
             }
         }
     }
-    draw_grid(grid, height, width, size);
+    draw_maze_grid(grid, height, width, size, -1, -1);
     printf("Here is the grid before the algorithm!\n");
+    getchar();
 }
 
 void make_maze(int size, int height, int width, Component **grid) {
@@ -173,4 +191,5 @@ void make_maze(int size, int height, int width, Component **grid) {
     }
     free(visited);
     printf("Here is the grid after the algorithm!\n");
+    getchar();
 }
