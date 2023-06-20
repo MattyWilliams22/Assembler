@@ -3,6 +3,7 @@
 
 #include "assembleutils.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 typedef void (*func_ptr_type)(operand*, int);
 
