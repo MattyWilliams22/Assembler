@@ -8,6 +8,54 @@
 extern state STATE;
 
 /**
+ * Executes a given arithmetic instruction based on the opcode.
+ *
+ * @param op1 The first operand to use in the arithmetic calculation
+ * @param op2 The second operand to use in the arithmetic calculation
+ * @param sf The sf bit of the instruction
+ * @param opc The opcode which determines which kind of arithmetic calculation to perform
+ * @return The result of the arithmetic calculation
+ */
+reg arithmetic_instructions(reg op1, reg op2, byte sf, byte opc) {
+  reg result; 
+  int access_mode_shift = (sf ? 63 : 31);
+
+  // Decide which type of operation to perform based on the opcode
+  switch (opc) {
+    case 0x0:  // ADD
+      result = op1 + op2;
+      break;
+
+    case 0x1:  // ADDS
+      result = op1 + op2;
+      STATE.pstate.n = (result >> access_mode_shift) & 0x1;
+      STATE.pstate.z = (result == 0);
+      STATE.pstate.c = (result < op1) || (result < op2);
+      STATE.pstate.v =  (op1 < 0 && op2 < 0 && result >= 0) || (op1 >= 0 && op2 >= 0 && result < 0);;
+      break;
+
+    case 0x2:  // SUB
+      result = op1 - op2;
+      break;
+
+    case 0x3:  // SUBS
+      result = op1 - op2;
+      STATE.pstate.n = (result >> access_mode_shift) & 0x1;
+      STATE.pstate.z = (result == 0);
+      if (sf == 1) {
+        STATE.pstate.c = (op1 >= op2);
+      } else {
+        STATE.pstate.c = (unsigned) op1 >= (unsigned) op2;
+      }
+      STATE.pstate.v = (((op1 ^ result) >> access_mode_shift) & 0x1) && (((op1 ^ op2) >> access_mode_shift) & 0x1);
+      break;
+  }
+
+  return result;
+}
+
+
+/**
  * Given an instruction of the type "Data Processing Immediate", processes and executes the instruction.
  *
  * @param instr The "Data Processing Immediate" instruction to be executed
@@ -36,32 +84,7 @@ void data_processing_immediate(instruction instr) {
     uint64_t op = (sh ? (imm12 << 12) : imm12);
     reg reg_op = choose_access_mode(sf, STATE.registers[rn]);
 
-    // Decide which type of operation to perform based on the opcode
-    switch (opc) {
-      case 0x0:  // ADD
-        result = reg_op + op;
-        break;
-
-      case 0x1:  // ADDS
-        result = reg_op + op;
-        STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
-        STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (result < reg_op);
-        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ op) >> (sf ? 63 : 31)) & 0x1);
-        break;
-
-      case 0x2:  // SUB
-        result = reg_op - op;
-        break;
-
-      case 0x3:  // SUBS
-        result = reg_op - op;
-        STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
-        STATE.pstate.z = (result == 0);
-        STATE.pstate.c = (reg_op >= op);
-        STATE.pstate.v = (((reg_op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((reg_op ^ op) >> (sf ? 63 : 31)) & 0x1);
-        break;
-    }
+    result = arithmetic_instructions(reg_op, op, sf, opc);
   }
 
   // Wide Move - check opi is 101
@@ -216,38 +239,8 @@ void data_processing_register(instruction instr) {
     // Arithmetic Instructions
     if ((((instr >> 24) & 0x1) == 1) && (((instr >> 21) & 0x1) == 0)) {
       long int op = choose_access_mode(sf, (rn == 31 ? 0 : STATE.registers[rn]));
-
-      // Decide which type of operation to perform based on the opcode
-      switch (opc) {
-        case 0x0:  // ADD
-          result = op + op2;
-          break;
-
-        case 0x1:  // ADDS
-          result = op + op2;
-          STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
-          STATE.pstate.z = (result == 0);
-          STATE.pstate.c = (result < op) || (result < op2);
-          STATE.pstate.v = (op < 0 && op2 < 0 && result >= 0) || (op >= 0 && op2 >= 0 && result < 0);
-          break;
-
-        case 0x2:  // SUB
-          result = op - op2;
-          break;
-
-        case 0x3:  // SUBS
-          result = op - op2;
-
-          STATE.pstate.n = (result >> (sf ? 63 : 31)) & 0x1;
-          STATE.pstate.z = (result == 0);
-          if (sf == 1) {
-            STATE.pstate.c = (op >= op2);
-          } else {
-            STATE.pstate.c = (unsigned) op >= (unsigned) op2;
-          }
-          STATE.pstate.v = (((op ^ result) >> (sf ? 63 : 31)) & 0x1) && (((op ^ op2) >> (sf ? 63 : 31)) & 0x1);
-          break;
-      }
+  
+      result = arithmetic_instructions(op, op2, sf, opc);
     }
   }
 
@@ -360,23 +353,39 @@ void single_data_transfer(instruction instr) {
       if (address % 4 != 0) {
         // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
         int mod = address % 4; // mod/4 of the way into address
-        reg address1 = retrieve_bits(STATE.memory[address / 4], (mod * 8), 31);
-        STATE.registers[rt] = set_bits(STATE.registers[rt], 0, ((4 - mod) * 8) - 1, address1);
+        
+        byte first_bit_from_address1 = mod * 8;
+        byte last_bit_from_address1 = 31;
+        byte last_bit_into_register_from_address1 = ((4 - mod) * 8) - 1;
+
+        reg address1 = retrieve_bits(STATE.memory[address / 4], first_bit_from_address1, last_bit_from_address1);
+        STATE.registers[rt] = set_bits(STATE.registers[rt], 0, last_bit_into_register_from_address1, address1);
 
         // All 4 bytes stored at (address + 3) are to be stored in rt after the lowest (4 - mod) bytes
+        byte first_bit_into_register_from_address2 = ((4 - mod) * 8);
+        byte last_bit_into_register_from_address2 = ((8 - mod) * 8) - 1;
+
         reg address2 = STATE.memory[(address + 3)/ 4];
-        STATE.registers[rt] = set_bits(STATE.registers[rt], ((4 - mod) * 8), ((8 - mod) * 8) - 1, address2);
+        STATE.registers[rt] = set_bits(STATE.registers[rt], first_bit_into_register_from_address2, last_bit_into_register_from_address2, address2);
 
         // The least significant (mod) bytes at (address + 7) are to be stored as the (mod) most significant bytes
         // in rt
-        reg address3 = retrieve_bits(STATE.memory[(address + 7) / 4], 0, (mod * 8) - 1);
-        STATE.registers[rt] = set_bits(STATE.registers[rt], ((8 - mod) * 8), 63, address3);
+        byte last_bit_from_address3 = (mod * 8) - 1;
+        byte first_bit_into_register_from_address3 = ((8 - mod) * 8);
+        byte last_bit_into_register_from_address3 = 63;
+
+        reg address3 = retrieve_bits(STATE.memory[(address + 7) / 4], 0, last_bit_from_address3);
+        STATE.registers[rt] = set_bits(STATE.registers[rt], first_bit_into_register_from_address3, last_bit_into_register_from_address3, address3);
 
       // If address is a multiple of 4 then the 8 bytes to load in are in the current address and the next one,
       // so only two memory addresses to be accessed
       } else {
-        STATE.registers[rt] = set_bits(STATE.registers[rt], 0, 31, STATE.memory[address / 4]);
-        STATE.registers[rt] = set_bits(STATE.registers[rt], 32, 63, STATE.memory[(address + 4) / 4]);
+        byte last_bit_into_register_from_address1 = 31;
+        byte first_bit_into_register_from_address2 = 32;
+        byte last_bit_into_register_from_address2 = 63;
+
+        STATE.registers[rt] = set_bits(STATE.registers[rt], 0, last_bit_into_register_from_address1, STATE.memory[address / 4]);
+        STATE.registers[rt] = set_bits(STATE.registers[rt], first_bit_into_register_from_address2, last_bit_into_register_from_address2, STATE.memory[(address + 4) / 4]);
       }
     } else {
       if (address % 4 == 0) {
@@ -384,13 +393,22 @@ void single_data_transfer(instruction instr) {
       } else {
         // Most significiant (4 - mod) bytes at address stored in the lowest (4 - mod) bytes of rt
         int mod = address % 4; // mod/4 of the way into address
-        reg address1 = retrieve_bits(STATE.memory[address / 4], (mod * 8), 31);
-        STATE.registers[rt] = set_bits(STATE.registers[rt], 0, ((4 - mod) * 8) - 1, address1);
+
+        byte first_bit_from_address1 = mod * 8;
+        byte last_bit_from_address1 = 31;
+        byte last_bit_into_register_from_address1 = ((4 - mod) * 8) - 1;
+
+        reg address1 = retrieve_bits(STATE.memory[address / 4], first_bit_from_address1, last_bit_from_address1);
+        STATE.registers[rt] = set_bits(STATE.registers[rt], 0, last_bit_into_register_from_address1, address1);
 
         // The least significant (mod) bytes at (address + 4) are to be stored as the (8 - mod) most significant bytes
         // in rt
-        reg address2 = retrieve_bits(STATE.memory[(address + 4) / 4], 0, (mod * 8) - 1);
-        STATE.registers[rt] = set_bits(STATE.registers[rt], ((4 - mod) * 8), 31, address2);
+        byte last_bit_from_address2 = (mod * 8) - 1;
+        byte first_bit_into_register_from_address2 = ((4 - mod) * 8);
+        byte last_bit_into_register_from_address2 = 31;
+
+        reg address2 = retrieve_bits(STATE.memory[(address + 4) / 4], 0, last_bit_from_address2);
+        STATE.registers[rt] = set_bits(STATE.registers[rt], first_bit_into_register_from_address2, last_bit_into_register_from_address2, address2);
       }
     }
   // Store Instruction
@@ -403,24 +421,40 @@ void single_data_transfer(instruction instr) {
       if (address % 4 != 0) {
         // Least significiant (4 - mod) bytes in rt stored in the most significant (4 - mod) bytes of address
         int mod = address % 4; // mod/4 of the way into register
-        reg result1 = retrieve_bits(result, 0, ((4 - mod) * 8) - 1);
-        STATE.memory[address / 4] = set_bits(STATE.memory[address / 4], (mod * 8), 31, result1);
+
+        byte last_bit_from_register_part1 = ((4 - mod) * 8) - 1;
+        byte first_bit_into_address1_from_register = (mod * 8);
+        byte last_bit_into_address1_from_register = 31;
+        
+        reg result1 = retrieve_bits(result, 0, last_bit_from_register_part1);
+        STATE.memory[address / 4] = set_bits(STATE.memory[address / 4], first_bit_into_address1_from_register, last_bit_into_address1_from_register, result1);
 
         // The next 4 bytes after the least significant (4 - mod) bytes in rt are to be stored in (address + 4) 
-        reg result2 = retrieve_bits(result, ((4 - mod) * 8), ((8 - mod) * 8) - 1);
+        byte first_bit_from_register_part2 = (4 - mod) * 8;
+        byte last_bit_from_register_part2 = ((8 - mod) * 8) - 1;
+        
+        reg result2 = retrieve_bits(result, first_bit_from_register_part2, last_bit_from_register_part2);
         STATE.memory[(address + 4) / 4] =  result2;
 
         // The most significant (mod) bytes in rt are to be stored as the (mod) least significant bytes
         // at (address + 8)
-        reg result3 = retrieve_bits(result, ((8 - mod) * 8), 63);
-        STATE.memory[(address + 8) / 4] = set_bits(STATE.memory[(address + 8) / 4], 0, (mod * 8) - 1, result3);
+        byte first_bit_from_register_part3 = ((8 - mod) * 8);
+        byte last_bit_from_register_part3 = 63;
+        byte last_bit_into_address3_from_register = (mod * 8) - 1;
+
+        reg result3 = retrieve_bits(result, first_bit_from_register_part3, last_bit_from_register_part3);
+        STATE.memory[(address + 8) / 4] = set_bits(STATE.memory[(address + 8) / 4], 0, last_bit_into_address3_from_register, result3);
 
       // If address is a multiple of 4 then the 8 bytes to store from rt into memory need to be stored at
       // the current address and the following address, the lower half of rt into the current, and the upper half
       // into the following address
       } else {
-        STATE.memory[address / 4] = retrieve_bits(result, 0, 31);
-        STATE.memory[(address + 4) / 4] = retrieve_bits(result, 32, 63);
+        byte last_bit_into_address1_from_register = 31;
+        byte first_bit_into_address2_from_register = 32;
+        byte last_bit_into_address2_from_register = 63;
+
+        STATE.memory[address / 4] = retrieve_bits(result, 0, last_bit_into_address1_from_register);
+        STATE.memory[(address + 4) / 4] = retrieve_bits(result, first_bit_into_address2_from_register, last_bit_into_address2_from_register);
       }
     } else {
       // 32-bit access mode so we only want to use the lowest 32 bits of the register
@@ -431,13 +465,22 @@ void single_data_transfer(instruction instr) {
       } else {
         // Least significant (4 - mod) bytes in rt stored in the most significant (4 - mod) bytes of address
         int mod = address % 4; // mod/4 of the way into register
-        reg result1 = retrieve_bits(result, 0, ((4 - mod) * 8) - 1);
-        STATE.memory[address / 4] = set_bits(STATE.memory[address / 4], (mod * 8), 31, result1);
+
+        byte last_bit_from_register_part1 = ((4 - mod) * 8) - 1;
+        byte first_bit_into_address1_from_register = (mod * 8);
+        byte last_bit_into_address1_from_register = 31;
+
+        reg result1 = retrieve_bits(result, 0, last_bit_from_register_part1);
+        STATE.memory[address / 4] = set_bits(STATE.memory[address / 4], first_bit_into_address1_from_register, last_bit_into_address1_from_register, result1);
 
         // The most significant (mod) bytes in rt are to be stored as the (mod) least significant bytes
         // at (address + 4)
-        reg result2 = retrieve_bits(result, ((4 - mod) * 8), 31);
-        STATE.memory[(address + 4) / 4] = set_bits(STATE.memory[(address + 4) / 4], 0, (mod * 8) - 1, result2);
+        byte first_bit_from_register_part2 = ((4 - mod) * 8);
+        byte last_bit_from_register_part2 = 31;
+        byte last_bit_into_address2_from_register = (mod * 8) - 1;
+
+        reg result2 = retrieve_bits(result, first_bit_from_register_part2, last_bit_from_register_part2);
+        STATE.memory[(address + 4) / 4] = set_bits(STATE.memory[(address + 4) / 4], 0, last_bit_into_address2_from_register, result2);
       }
     }
   }  
