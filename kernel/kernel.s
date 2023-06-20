@@ -19,7 +19,7 @@ main:
 wait:
     movz x0, #0xffff, lsl #48
     loop:
-        sub x0, #0x1; subtract 1
+        sub x0, x0, #0x1; subtract 1
         cmp x0, #0x0; check if it's zero
         b.ne loop; if not loop back and keep subtracting
     mov pc, x14

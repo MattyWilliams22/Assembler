@@ -18,11 +18,13 @@ main:
 
 wait:
     movz x0, #0xffff, lsl #48
-    loop:
-        sub x0, #0x1
-        cmp x0, #0x0
-        b.ne loop
+    b loop
     mov pc, x14
+
+loop:
+    sub x0, x0, #0x1
+    cmp x0, #0x0
+    b.ne loop
 
 BufferInfo:
     .int BufferInfoEnd - BufferInfo
@@ -61,7 +63,7 @@ wait_write:
     b.ne wait_write
 
 MailboxWrite:
-    add x0, x1
+    add x0, x0, x1
     ldr x2, #0x3f00b880
 
     ldr x14, pc
