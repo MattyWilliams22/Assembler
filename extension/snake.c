@@ -7,8 +7,8 @@
 #include <stdbool.h>
 
 #define TICKDELAY 100000.0
-#define WIDTH 20
-#define HEIGHT 20
+#define WIDTH 15
+#define HEIGHT 15
 #define UP 'w'
 #define LEFT 'a'
 #define DOWN 's'
@@ -16,7 +16,7 @@
 
 enum Mode {
   MANUAL_MODE,
-  AUTONOMOUS_MODE  
+  AUTONOMOUS_BFS_MODE  
 };
 
 int score;
@@ -195,20 +195,23 @@ void bfs(int grid[HEIGHT][WIDTH], int srcRow, int srcCol, int destRow, int destC
     }
   }
 
-  int currRow = destRow;
-  int currCol = destCol;
-  while (parent[currRow][currCol] != -1) {
-    int prevRow = parent[currRow][currCol] / WIDTH;
-    int prevCol = parent[currRow][currCol] % WIDTH;
-    currRow = prevRow;
-    currCol = prevCol;
-  }
+  *nextMoveRow = destRow;
+  *nextMoveCol = destCol;
 
-  *nextMoveRow = currRow;
-  *nextMoveCol = currCol;
+  // Print the BFS search
+  for (int i = 0; i < HEIGHT; i++) {
+    for (int j = 0; j < WIDTH; j++) {
+      if (visited[i][j]) {
+        printf("#");
+      } else {
+        printf(" ");
+      }
+    }
+    printf("\n");
+  }
 }
 
-void autonomous() {
+void autonomous_bfs() {
   int grid[HEIGHT][WIDTH];
   for (int i = 0; i < HEIGHT; i++) {
     for (int j = 0; j < WIDTH; j++) {
@@ -268,8 +271,8 @@ void logic() {
       break;
   }
 
-  if (mode == AUTONOMOUS_MODE) {
-    autonomous();
+  if (mode == AUTONOMOUS_BFS_MODE) {
+    autonomous_bfs();
   }
 
   if (x >= WIDTH) {
@@ -329,7 +332,7 @@ int main() {
   srand(time(0));
   printf("Select the mode of operation:\n");
   printf("0. Manual Mode\n");
-  printf("1. Autonomous Mode\n");
+  printf("1. Autonomous BFS Mode\n");
   printf("Enter your choice: ");
   scanf("%d", &mode);
 
