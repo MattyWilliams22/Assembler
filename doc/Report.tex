@@ -1,6 +1,7 @@
 \documentclass[11pt]{article}
 
 \usepackage{fullpage}
+\usepackage{graphicx}
 
 \begin{document}
 
@@ -13,11 +14,90 @@
 
 \section{Assembler Structure and Implementation}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-culpa qui officia deserunt mollit anim id est laborum.
+Our assembler is split into five .c files each with their own .h header file.
+
+\begin{itemize}
+    \item The first file is assemble.c which contains the main function.
+    \item The second file is tokenizer.c which is responsible for parsing the text file given as a parameter and outputting an array of tokenised lines.
+    \item The third file is symbolTable.c which contains the functions required to manipulate a symbol table ADT. The symbol table is used to store the address of a label so that the address can be used at the necessary points in the assembly code.
+    \item The fourth file is assembleinstructions.c which contains all of the functions responsible for converting operands to their corresponding binary form and combining the binary to form a 32 bit integer.
+    \item The fifth file is assemblesetup.c which is responsible for file handling, memory allocation and freeing. 
+\end{itemize}
+
+\section{Extension Description and Example of Use}
+
+\subsection{Description}
+
+Our extension is a game of snake. Our code includes:
+
+\begin{itemize}
+    \item Breadth First Search
+    \item Random Maze Generation
+    \item A* Pathfinding
+\end{itemize}
+
+\subsection{Example of Use}
+
+
+\graphicspath{ {./images/} }
+
+% \includegraphics{example1}
+
+
+\section{Design of Extension and Problems Overcome}
+
+\subsection{Design}
+
+The extension is split up into two .c files and their .h header files.
+\begin{itemize}
+    \item The first file is snake.c which contains the main function and is responsible for the main gameplay loop.
+    \item The second file is maze.c which contains the maze generating functions and drawing functions.
+\end{itemize}
+
+
+
+
+\subsection{Problems Overcame}
+
+\begin{itemize}
+    \item We had problems with displaying the search algorithms properly.
+    \item We had problems with memory leaks.
+\end{itemize}
+
+\section{Implementation Testing}
+
+\begin{itemize}
+    \item Testsuite
+    \item Continuous integration with gitlab
+    \item Print messages
+    \item GDB
+    \item Valgrind
+\end{itemize}
+
+\section{Group Reflection}
+
+As a group we were ... at communicating and splitting work up between the group.
+Next time, we would do ... differently. We would keep ... the same.
+
+\section{Individual Reflections}
+
+\subsection{Dina Duong}
+
+abc
+
+\subsection{Maciej Rytlewski}
+
+abc
+
+\subsection{Kritik Pant}
+
+abc
+
+\subsection{Matty Williams}
+
+... is how well I fit into the group.
+My strengths were ... .
+My weaknesses were ... .
+With a different group of people I would do ... differently but do ... the same way. 
 
 \end{document}
