@@ -3,7 +3,8 @@ typedef enum {
   HEAD,
   TAIL,
   FRUIT,
-  EMPTY  
+  EMPTY,
+  PATH_ELEM  
 } Component;
 
 typedef struct {
@@ -21,3 +22,5 @@ int get_grid_height(int height, int size);
 int get_grid_width(int width, int size);
 void draw_maze_grid(Component **grid, int height, int width, int size, int nTail, int score);
 void draw_default_grid(Component **grid, int gridHeight, int gridWidth, int nTail, int score);
+int get_valid_neighbours(Cell s, int height, int width, Cell *valid_neighbours, bool **visited);
+Cell get_random_cell(Cell *cells, int num_cells);

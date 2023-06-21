@@ -32,15 +32,15 @@ void draw_default_grid(Component **grid, int gridHeight, int gridWidth, int nTai
         case EMPTY:
           printf(" ");
           break;
+        case PATH_ELEM:
+            printf("*");
+            break;
         default:
           // U for undefined
           printf("U");
       }
     }
     printf("\n");
-  }
-  if (nTail == 0) {
-    printf("Use WASD or Arrow Keys to move\n");
   }
 } 
 

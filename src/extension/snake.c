@@ -60,6 +60,14 @@ void get_fruit(int height, int width) {
   game_grid[fruitY][fruitX] = FRUIT;
 }
 
+void get_start_point(int height, int width) {
+  while (game_grid[y][x] != EMPTY) {
+    x = rand() % width;
+    y = rand() % height;
+  }
+  game_grid[y][x] = HEAD;
+}
+
 int keyboard_event() {
   struct termios oldterminal, newterminal;
   int ch;
@@ -88,8 +96,6 @@ int keyboard_event() {
 void setup() {
   system("clear");
   gameover = 0;
-  x = WIDTH / 2;
-  y = HEIGHT / 2;
   score = 0;
   nTail = 0;
   flag = -1;
@@ -107,6 +113,7 @@ void setup() {
       }
     }
   }
+  get_start_point(HEIGHT, WIDTH);
   get_fruit(HEIGHT, WIDTH);
   gridHeight = HEIGHT;
   gridWidth = WIDTH;
@@ -126,17 +133,13 @@ void maze_setup() {
   gameover = 0;
   x = 0;
   y = 0;
-  while (game_grid[y][x] != EMPTY) {
-    x = rand() % get_grid_width(mazeWidth, mazeSize);
-    y = rand() % get_grid_height(mazeHeight, mazeSize);
-  }
-  game_grid[y][x] = HEAD;
-  get_fruit(get_grid_height(mazeHeight, mazeSize), get_grid_width(mazeWidth, mazeSize));
+  gridHeight = get_grid_height(mazeHeight, mazeSize);
+  gridWidth = get_grid_width(mazeWidth, mazeSize);
+  get_start_point(gridHeight, gridWidth);
+  get_fruit(gridHeight, gridWidth);
   score = 0;
   nTail = 0;
   flag = -1;
-  gridHeight = get_grid_height(mazeHeight, mazeSize);
-  gridWidth = get_grid_width(mazeWidth, mazeSize);
 }
 
 void draw() {
@@ -212,37 +215,37 @@ void input() {
   }
 }
 
-bool isSafe(int bfs_grid[HEIGHT][WIDTH], int row, int col) {
-  return (row >= 0 && row < HEIGHT && col >= 0 && col < WIDTH && bfs_grid[row][col] == 0);
+bool isSafe(int bfs_grid[gridHeight][gridWidth], int row, int col) {
+  return (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth && bfs_grid[row][col] == 0);
 }
 
-void bfs(int bfs_grid[HEIGHT][WIDTH], int srcRow, int srcCol, int destRow, int destCol, int* nextMoveRow, int* nextMoveCol) {
+int bfs(int bfs_grid[gridHeight][gridWidth], int srcRow, int srcCol, int destRow, int destCol, int *path) {
   int dx[] = {0, 0, -1, 1};
   int dy[] = {-1, 1, 0, 0};
   
-  bool visited[HEIGHT][WIDTH];
-  for (int i = 0; i < HEIGHT; i++) {
-    for (int j = 0; j < WIDTH; j++) {
+  bool visited[gridHeight][gridWidth];
+  for (int i = 0; i < gridHeight; i++) {
+    for (int j = 0; j < gridWidth; j++) {
       visited[i][j] = false;
     }
   }
 
-  int queue[HEIGHT * WIDTH];
+  int queue[gridHeight * gridWidth];
   int front = 0, rear = 0;
 
   visited[srcRow][srcCol] = true;
-  queue[rear++] = srcRow * WIDTH + srcCol;
+  queue[rear++] = srcRow * gridWidth + srcCol;
 
-  int parent[HEIGHT][WIDTH];
-  for (int i = 0; i < HEIGHT; i++) {
-    for (int j = 0; j < WIDTH; j++) {
+  int parent[gridHeight][gridWidth];
+  for (int i = 0; i < gridHeight; i++) {
+    for (int j = 0; j < gridWidth; j++) {
       parent[i][j] = -1;
     }
   }
 
   while (front != rear) {
-    int currRow = queue[front] / WIDTH;
-    int currCol = queue[front] % WIDTH;
+    int currRow = queue[front] / gridWidth;
+    int currCol = queue[front] % gridWidth;
     front++;
 
     if (currRow == destRow && currCol == destCol) {
@@ -260,20 +263,34 @@ void bfs(int bfs_grid[HEIGHT][WIDTH], int srcRow, int srcCol, int destRow, int d
     }
   }
 
-  *nextMoveRow = destRow;
-  *nextMoveCol = destCol;
-
-  // Print the BFS search
-  for (int i = 0; i < HEIGHT; i++) {
-    for (int j = 0; j < WIDTH; j++) {
-      if (visited[i][j]) {
-        printf("#");
-      } else {
-        printf(" ");
-      }
+  // Need to set array of flags based on parent array
+  int path_length = 0;
+  int curr_row = fruitY;
+  int curr_col = fruitY;
+  int prev_col;
+  int prev_row;
+  while (curr_col != srcCol || curr_row != srcRow) {
+    prev_col = curr_col;
+    prev_row = curr_row;
+    int parent_index = parent[curr_row][curr_col];
+    if (parent_index == -1) {
+      printf("ERROR\n");
     }
-    printf("\n");
+    curr_row = parent_index / gridWidth;
+    curr_col = parent_index % gridWidth;
+    if (curr_row < prev_row) {
+      path[path_length] = 1;
+    } else if (curr_row > prev_row) {
+      path[path_length] = 2;
+    } else if (curr_col < prev_col) {
+      path[path_length] = 3;
+    } else if (curr_col > prev_col) {
+      path[path_length] = 4;
+    }
+    path_length++;
   }
+
+  return path_length;
 }
 
 void check_collision_default() {
@@ -288,10 +305,10 @@ void check_collision_maze() {
   }
 }
 
-void autonomous_bfs() {
-  int bfs_grid[HEIGHT][WIDTH];
-  for (int i = 0; i < HEIGHT; i++) {
-    for (int j = 0; j < WIDTH; j++) {
+int autonomous_bfs(int *path) {
+  int bfs_grid[gridHeight][gridWidth];
+  for (int i = 0; i < gridHeight; i++) {
+    for (int j = 0; j < gridWidth; j++) {
       bfs_grid[i][j] = 0;
     }
   }
@@ -303,18 +320,7 @@ void autonomous_bfs() {
   bfs_grid[y][x] = -1;
   bfs_grid[fruitY][fruitX] = -1;
 
-  int nextMoveRow, nextMoveCol;
-  bfs(bfs_grid, y, x, fruitY, fruitX, &nextMoveRow, &nextMoveCol);
-
-  if (nextMoveRow < y) {
-    flag = 1;
-  } else if (nextMoveRow > y) {
-    flag = 2;
-  } else if (nextMoveCol < x) {
-    flag = 3;
-  } else if (nextMoveCol > x) {
-    flag = 4;
-  }
+  return bfs(bfs_grid, y, x, fruitY, fruitX, path);
 }
 
 void check_teleport() {
@@ -361,9 +367,9 @@ void logic() {
       break;
   }
   
-  if (mode == AUTONOMOUS_BFS_MODE) {
-    autonomous_bfs();
-  }
+  // if (mode == AUTONOMOUS_BFS_MODE) {
+  //   autonomous_bfs();
+  // }
 
   if (gridType == STANDARD && mode == MANUAL_MODE) {
     check_teleport();
@@ -377,11 +383,7 @@ void logic() {
 
   if (game_grid[y][x] == FRUIT) {
     score += 10;
-    if (gridType == MAZE) {
-      get_fruit(get_grid_height(mazeHeight, mazeSize), get_grid_width(mazeWidth, mazeSize));
-    } else {
-      get_fruit(HEIGHT, WIDTH);
-    }
+    get_fruit(gridHeight, gridWidth);
     game_grid[tailY[nTail]][tailX[nTail]] = TAIL;
     nTail++;
   } else {
@@ -420,42 +422,86 @@ void check_gameover() {
   }
 }
 
+// Set path to an array of flags, 
+// which determine the way the snake must move to reach the fruit. 
+// Return the number of moves the snake must make to reach the fruit.
+int get_path(int *path) {
+  int path_length = 0;
+  // Calculate path
+  if (mode == AUTONOMOUS_BFS_MODE) {
+    path_length = autonomous_bfs(path);
+  }
+  return path_length;
+}
+
+void ai_loop() {
+  int *path;
+  path = malloc(gridHeight * gridWidth * sizeof(*path));
+  int path_length;
+  int buffer;
+  while (!gameover) {
+    path_length = get_path(path);
+    buffer = path_length;
+    while (path_length > 0 && !gameover) {
+      if (gridType == STANDARD) {
+        draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
+      } else {
+        draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
+      }
+      flag = path[buffer - path_length];
+      logic();
+      usleep(TICKDELAY);
+      path_length--;
+    }
+    check_gameover();
+  }
+  free(path);
+}
+
 int main() {
-  srand(time(0));
-  printf("Select the mode of operation:\n");
-  printf("0. Manual Mode\n");
-  printf("1. Autonomous BFS Mode\n");
-  printf("Enter your choice: ");
-  scanf("%d", &mode);
   printf("\nSelect the type of grid:\n");
   printf("0. Standard Snake\n");
   printf("1. Random Maze\n");
   printf("Enter your choice: ");
   scanf("%d", &gridType);
 
+  printf("Select the mode of operation:\n");
+  printf("0. Manual Mode\n");
+  printf("1. Autonomous BFS Mode\n");
+  printf("Enter your choice: ");
+  scanf("%d", &mode);
+  
   while (getchar() != '\n') continue;  // Clear input buffer
 
-  if (gridType == MAZE) {
-    maze_setup();
-    while (1) {
-      draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-      input();
-      logic();
-      check_gameover();
-      usleep(get_tick_speed());
-    }
-    free_maze_grid(game_grid, mazeHeight, mazeSize);
-  } else {
-    highscore = 0;
+  highscore = 0;
+  if (gridType == STANDARD) {
     setup();
-    while (1) {
-      draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-      input();
-      logic();
-      check_gameover();
-      usleep(get_tick_speed());
+    if (mode == MANUAL_MODE) {
+      while (1) {
+        draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
+        input();
+        logic();
+        check_gameover();
+        usleep(get_tick_speed());
+      }
+    } else if (mode == AUTONOMOUS_BFS_MODE) {
+      ai_loop();
     }
     free_default_grid(game_grid, HEIGHT);
+  } else if (gridType == MAZE) {
+    maze_setup();
+    if (mode == MANUAL_MODE) {
+      while (1) {
+        draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
+        input();
+        logic();
+        check_gameover();
+        usleep(TICKDELAY);
+      }
+    } else if (mode == AUTONOMOUS_BFS_MODE) {
+      ai_loop();
+    }
+    free_maze_grid(game_grid, mazeHeight, mazeSize);
   }
   return 0;
 }
