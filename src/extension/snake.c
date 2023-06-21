@@ -20,7 +20,10 @@
 
 enum Mode {
   MANUAL_MODE,
-  AUTONOMOUS_BFS_MODE
+  AUTONOMOUS_BFS_MODE,
+  AUTONOMOUS_ASTAR_MODE,
+  AUTONOMOUS_DFS_MODE,
+  AUTONOMOUS_DIJKSTRA_MODE
 };
 
 enum GridType {
@@ -714,10 +717,6 @@ void check_collision_maze() {
   }
 }
 
-int autonomous_bfs(int *path) {
-  return dijkstra(y, x, fruitY, fruitX, path);
-}
-
 void check_teleport() {
   if (game_grid[y][x] == WALL) {
     if (x == 0) {
@@ -818,8 +817,21 @@ void check_gameover() {
 int get_path(int *path) {
   int path_length = 0;
   // Calculate path
-  if (mode == AUTONOMOUS_BFS_MODE) {
-    path_length = autonomous_bfs(path);
+  switch (mode) {
+    case AUTONOMOUS_BFS_MODE:
+      path_length = bfs(y, x, fruitY, fruitX, path);
+      break;
+    case AUTONOMOUS_ASTAR_MODE:
+      path_length = aStar(y, x, fruitY, fruitX, path);
+      break;
+    case AUTONOMOUS_DIJKSTRA_MODE:
+      path_length = dijkstra(y, x, fruitY, fruitX, path);
+      break;
+    case AUTONOMOUS_DFS_MODE:
+      path_length = dfs(y, x, fruitY, fruitX, path);
+      break;
+    default:
+      break;
   }
   return path_length;
 }
@@ -863,6 +875,9 @@ int main() {
   printf("\nSelect the mode of operation:\n");
   printf("0. Manual Mode\n");
   printf("1. Autonomous BFS Mode\n");
+  printf("2. Autonomous A* Mode\n");
+  printf("3. Autonomous DFS Mode\n");
+  printf("4. Autonomous Dijkstra Mode\n");
   printf("Enter your choice: ");
   scanf("%d", &mode);
   
@@ -879,7 +894,7 @@ int main() {
         check_gameover();
         usleep(get_tick_speed());
       }
-    } else if (mode == AUTONOMOUS_BFS_MODE) {
+    } else {
       ai_loop();
     }
     free_default_grid(game_grid, HEIGHT);
@@ -893,7 +908,7 @@ int main() {
         check_gameover();
         usleep(TICKDELAY);
       }
-    } else if (mode == AUTONOMOUS_BFS_MODE) {
+    } else {
       ai_loop();
     }
     free_maze_grid(game_grid, mazeHeight, mazeSize);
