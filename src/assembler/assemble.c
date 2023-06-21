@@ -616,11 +616,11 @@ int main(int argc, char **argv) {
 
   // Convert lines of file to an array of token_lines
   token_line *token_lines = read_assembly(fp, nlines, &ntokenlines);
-
+  
   // Convert token_lines to binary_lines
   binary binary_lines[ntokenlines];
   for (int i = 0; i < ntokenlines; i++) {
-      binary_lines[i] = assemble_line(token_lines[i]);
+    binary_lines[i] = assemble_line(token_lines[i]);
   }
 
   // Writes binary_lines to output file

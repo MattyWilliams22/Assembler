@@ -467,9 +467,11 @@ token_line *process_line(char *line, int line_no, token_line *lines) {
   if (string_count > 0) {
     if (strlen(strings[0]) > 1) {
       if (strings[0][1] == '.') {
-        strings[2] = strings[1];
+        strings[2] = strdup(strings[1]);
+        free(strings[1]);
         strings[1] = strdup(strings[0] + 2);
-        strings[0] = "b.";
+        free(strings[0]);
+        strings[0] = strdup("b.");
         string_count++;
       }
     }
@@ -532,11 +534,13 @@ token_line *process_line(char *line, int line_no, token_line *lines) {
     current_operands[operand_count - 1].type = IMM;
   }
 
-  operand *operands = malloc(operand_count * sizeof(operand));
-  for (int i = 0; i < operand_count; i++) {
-    operands[i] = *make_operand(current_operands[i].type, current_operands[i].word);
+  // Create a dynamically allocated token line
+  token_line *current_line = make_token_line(opcode, operand_count, current_operands);
+
+  // Free all of the strdup()ed Strings
+  for (int i = 0; i < string_count; i++) {
+    free(strings[i]);
   }
-  token_line *current_line = make_token_line(opcode, operand_count, operands);
 
   return current_line; 
 }
@@ -593,6 +597,9 @@ token_line *read_assembly(FILE* fp, int nlines, int *line_count) {
           add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], *line_count, lines);
         }
         (*line_count)++;
+      } else {
+        // Free the token line if it is not going to be used
+        free_token_line(current_line);
       }
     }
   }

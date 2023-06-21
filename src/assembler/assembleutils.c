@@ -41,8 +41,14 @@ token_line *make_token_line(opcode_name opcode, int op_count, operand *ops) {
   token_line *new = malloc(sizeof(token_line));
   assert (new != NULL);
   new->opcode = opcode;
-  new->operands = ops;
   new->operand_count = op_count;
+
+  // Create a dynamically allocated array of operands
+  new->operands =  malloc(op_count * sizeof(operand));
+  for (int i = 0; i < op_count; i++) {
+    new->operands[i] = *make_operand(ops[i].type, ops[i].word);
+  }
+  
   return new;
 }
 

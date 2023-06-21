@@ -99,7 +99,7 @@ Node_t *make_list_node(Key label, Value address, int no_dependencies, Node_t *ne
     perror("Error allocating memory to new_node in make_list_node");
     return NULL;
   }
-  new_node->label = label;
+  new_node->label = strdup(label);
   new_node->address = address;
   new_node->no_dependencies = no_dependencies;
   new_node->next = next;
@@ -112,6 +112,7 @@ Node_t *make_list_node(Key label, Value address, int no_dependencies, Node_t *ne
 }
 
 void free_list_node(Node_t *node) {
+  free(node->label);
   free(node->dependencies);
   free(node);
 }
@@ -156,7 +157,7 @@ void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines)
     set_addresses(table, *node, lines);
   } else {
     Node_t *new_node = (Node_t *)malloc(sizeof(Node_t));
-    new_node->label = label;
+    new_node->label = strdup(label);
     new_node->address = line_no;
     new_node->no_dependencies = 0;
     new_node->next = NULL;
