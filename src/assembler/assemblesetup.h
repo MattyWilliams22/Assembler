@@ -1,7 +1,8 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef SETUP_H
+#define SETUP_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 typedef enum {
   ADD,ADDS,SUB,SUBS,
@@ -48,6 +49,8 @@ typedef struct {
 
 typedef uint32_t binary;
 
+int count_lines(FILE *fp);
+void write_to_binary_file(char *filename, binary *binary_lines, int nlines, token_line *token_lines);
 operand *make_operand(operand_type type, char *word);
 void free_operand(operand *op);
 token_line *make_token_line(opcode_name opcode, int op_count, operand* operands);

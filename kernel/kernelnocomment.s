@@ -2,7 +2,7 @@ main:
     ldr x14, pc
     b wait
     
-    movk r0, #0x1
+    movk x0, #0x1
     ldr x14, pc
     b SetLEDState
 
@@ -27,7 +27,7 @@ loop:
     b.ne loop
 
 BufferInfo:
-    .int BufferInfoEnd - BufferInfo
+    .int 32
     .int 0
     .int 0x00038041
     .int 8
@@ -35,7 +35,6 @@ BufferInfo:
     .int 130
     .int 1
     .int 0
-BufferInfoEnd:
 
 SetLEDState:
     ldr x13, x14

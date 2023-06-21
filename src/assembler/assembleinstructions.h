@@ -1,9 +1,9 @@
-#ifndef ASSEMBLE_H
-#define ASSEMBLE_H
+#ifndef ASSEMBLEINSTRUCTIONS_H
+#define ASSEMBLEINSTRUCTIONS_H
 
 #include <stdint.h>
 #include <stdio.h>
-#include "assembleutils.h"
+#include "assemblesetup.h"
 
 #define HALTINSTR 0x8a000000
 #define NOOP 0xd503201f
@@ -24,8 +24,6 @@ typedef enum {
 } addressing_mode;
 
 // Prototypes
-int count_lines(FILE *fp);
-void write_to_binary_file(char *filename, binary *binary_lines, int nlines, token_line *token_lines);
 binary set_bits(binary input, int start, int end, binary value);
 char *remove_first_char(char *str);
 void remove_last_char(char *str);
