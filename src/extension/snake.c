@@ -215,11 +215,14 @@ void input() {
   }
 }
 
-bool isSafe(int bfs_grid[gridHeight][gridWidth], int row, int col) {
-  return (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth && bfs_grid[row][col] == 0);
+bool isSafe(int row, int col) {
+  if (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth) {
+    return (game_grid[row][col] != WALL && game_grid[row][col] != TAIL && game_grid[row][col] != HEAD);
+  }
+  return false;
 }
 
-int bfs(int bfs_grid[gridHeight][gridWidth], int srcRow, int srcCol, int destRow, int destCol, int *path) {
+int bfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
   int dx[] = {0, 0, -1, 1};
   int dy[] = {-1, 1, 0, 0};
   
@@ -255,7 +258,7 @@ int bfs(int bfs_grid[gridHeight][gridWidth], int srcRow, int srcCol, int destRow
     for (int i = 0; i < 4; i++) {
       int newRow = currRow + dx[i];
       int newCol = currCol + dy[i];
-      if (isSafe(bfs_grid, newRow, newCol) && !visited[newRow][newCol]) {
+      if (isSafe(newRow, newCol) && !visited[newRow][newCol]) {
         visited[newRow][newCol] = true;
         queue[rear++] = newRow * WIDTH + newCol;
         parent[newRow][newCol] = currRow * WIDTH + currCol;
@@ -263,15 +266,17 @@ int bfs(int bfs_grid[gridHeight][gridWidth], int srcRow, int srcCol, int destRow
     }
   }
 
-  // Need to set array of flags based on parent array
   int path_length = 0;
-  int curr_row = fruitY;
-  int curr_col = fruitY;
+  int curr_row = destRow;
+  int curr_col = destCol;
   int prev_col;
   int prev_row;
-  while (curr_col != srcCol || curr_row != srcRow) {
+  do {
     prev_col = curr_col;
     prev_row = curr_row;
+    if (game_grid[prev_row][prev_col] == EMPTY) {
+      game_grid[prev_row][prev_col] = PATH_ELEM;
+    }
     int parent_index = parent[curr_row][curr_col];
     if (parent_index == -1) {
       printf("ERROR\n");
@@ -279,17 +284,16 @@ int bfs(int bfs_grid[gridHeight][gridWidth], int srcRow, int srcCol, int destRow
     curr_row = parent_index / gridWidth;
     curr_col = parent_index % gridWidth;
     if (curr_row < prev_row) {
-      path[path_length] = 1;
-    } else if (curr_row > prev_row) {
       path[path_length] = 2;
+    } else if (curr_row > prev_row) {
+      path[path_length] = 1;
     } else if (curr_col < prev_col) {
-      path[path_length] = 3;
-    } else if (curr_col > prev_col) {
       path[path_length] = 4;
+    } else if (curr_col > prev_col) {
+      path[path_length] = 3;
     }
     path_length++;
-  }
-
+  } while (curr_col != srcCol || curr_row != srcRow);
   return path_length;
 }
 
@@ -306,21 +310,7 @@ void check_collision_maze() {
 }
 
 int autonomous_bfs(int *path) {
-  int bfs_grid[gridHeight][gridWidth];
-  for (int i = 0; i < gridHeight; i++) {
-    for (int j = 0; j < gridWidth; j++) {
-      bfs_grid[i][j] = 0;
-    }
-  }
-
-  for (int i = 0; i < nTail; i++) {
-    bfs_grid[tailY[i]][tailX[i]] = 1;
-  }
-
-  bfs_grid[y][x] = -1;
-  bfs_grid[fruitY][fruitX] = -1;
-
-  return bfs(bfs_grid, y, x, fruitY, fruitX, path);
+  return bfs(y, x, fruitY, fruitX, path);
 }
 
 void check_teleport() {
@@ -366,10 +356,6 @@ void logic() {
     default:
       break;
   }
-  
-  // if (mode == AUTONOMOUS_BFS_MODE) {
-  //   autonomous_bfs();
-  // }
 
   if (gridType == STANDARD && mode == MANUAL_MODE) {
     check_teleport();
@@ -394,8 +380,7 @@ void logic() {
 
 void check_gameover() {
   if (gameover) {
-    // system("clear");
-    printf("Game Over!\n");
+    printf("\nGame Over!\n");
     if (score > highscore) {
       highscore = score;
       printf("New Highscore: %d\n", highscore);
@@ -438,19 +423,23 @@ void ai_loop() {
   int *path;
   path = malloc(gridHeight * gridWidth * sizeof(*path));
   int path_length;
-  int buffer;
   while (!gameover) {
     path_length = get_path(path);
-    buffer = path_length;
     while (path_length > 0 && !gameover) {
       if (gridType == STANDARD) {
         draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
       } else {
         draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
       }
-      flag = path[buffer - path_length];
+      if (keyboard_event()) {
+        char key = getchar();
+        if (key == 'x') {
+          exit(0);
+        }
+      }
+      flag = path[path_length - 1];
       logic();
-      usleep(TICKDELAY);
+      usleep(get_tick_speed());
       path_length--;
     }
     check_gameover();
@@ -459,13 +448,14 @@ void ai_loop() {
 }
 
 int main() {
-  printf("\nSelect the type of grid:\n");
+  system("clear");
+  printf("Select the type of grid:\n");
   printf("0. Standard Snake\n");
   printf("1. Random Maze\n");
   printf("Enter your choice: ");
   scanf("%d", &gridType);
 
-  printf("Select the mode of operation:\n");
+  printf("\nSelect the mode of operation:\n");
   printf("0. Manual Mode\n");
   printf("1. Autonomous BFS Mode\n");
   printf("Enter your choice: ");
