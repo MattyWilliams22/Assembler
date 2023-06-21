@@ -2,7 +2,7 @@ main:
     ldr x14, pc
     b wait
     
-    movk r0, #0x1; move 1 to first register
+    movk x0, #0x1; move 1 to first register
     ldr x14, pc
     b SetLEDState
 
