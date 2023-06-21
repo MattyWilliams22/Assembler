@@ -9,6 +9,7 @@
 #include "maze.h"
 
 #define TICKDELAY 100000.0
+#define SEARCHDELAY 10000
 #define WIDTH 30
 #define HEIGHT 30
 #define UP 'w'
@@ -237,6 +238,16 @@ int bfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
   int front = 0, rear = 0;
 
   visited[srcRow][srcCol] = true;
+
+  if (game_grid[srcRow][srcCol] == EMPTY) {
+    game_grid[srcRow][srcCol] = SEARCHED;
+    if (gridType == STANDARD) {
+      draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
+    } else {
+      draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
+    }
+  }
+
   queue[rear++] = srcRow * gridWidth + srcCol;
 
   int parent[gridHeight][gridWidth];
@@ -260,6 +271,17 @@ int bfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
       int newCol = currCol + dy[i];
       if (isSafe(newRow, newCol) && !visited[newRow][newCol]) {
         visited[newRow][newCol] = true;
+
+        if (game_grid[newRow][newCol] == EMPTY) {
+          game_grid[newRow][newCol] = SEARCHED;
+          usleep(SEARCHDELAY);
+          if (gridType == STANDARD) {
+            draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
+          } else {
+            draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
+          }
+        }
+
         queue[rear++] = newRow * WIDTH + newCol;
         parent[newRow][newCol] = currRow * WIDTH + currCol;
       }
@@ -274,7 +296,7 @@ int bfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
   do {
     prev_col = curr_col;
     prev_row = curr_row;
-    if (game_grid[prev_row][prev_col] == EMPTY) {
+    if (game_grid[prev_row][prev_col] == EMPTY || game_grid[prev_row][prev_col] == SEARCHED) {
       game_grid[prev_row][prev_col] = PATH_ELEM;
     }
     int parent_index = parent[curr_row][curr_col];
@@ -294,6 +316,15 @@ int bfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
     }
     path_length++;
   } while (curr_col != srcCol || curr_row != srcRow);
+  if (gridType == STANDARD) {
+    draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
+  } else {
+    draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
+  }
+  printf("Here is the shortest path to the fruit!\n");
+  printf("Press any key to continue... \n");
+  getchar();
+  clear_searched(game_grid, gridHeight, gridWidth);
   return path_length;
 }
 

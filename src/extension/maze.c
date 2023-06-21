@@ -35,6 +35,9 @@ void draw_default_grid(Component **grid, int gridHeight, int gridWidth, int nTai
         case PATH_ELEM:
             printf("*");
             break;
+        case SEARCHED:
+            printf("?");
+            break;
         default:
           // U for undefined
           printf("U");
@@ -43,6 +46,16 @@ void draw_default_grid(Component **grid, int gridHeight, int gridWidth, int nTai
     printf("\n");
   }
 } 
+
+void clear_searched(Component **grid, int height, int width) {
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            if (grid[i][j] == SEARCHED) {
+                grid[i][j] = EMPTY;
+            }
+        }
+    }
+}
 
 void draw_maze_grid(Component **grid, int height, int width, int size, int nTail, int score) {
   draw_default_grid(grid, get_grid_height(height, size), get_grid_width(width, size), nTail, score);
