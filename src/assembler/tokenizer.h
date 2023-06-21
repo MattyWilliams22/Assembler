@@ -1,7 +1,7 @@
 #ifndef TOKENIZER_H
 #define TOKENIZER_H
 
-#include "assembleutils.h"
+#include "assemblesetup.h"
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -35,5 +35,6 @@ void get_types_null(operand *operands, int op_count);
 bool is_halt(opcode_name opcode, operand *operands, int op_count);
 token_line *process_line(char *line, int line_no, token_line *lines);
 token_line *read_assembly(FILE* fp, int nlines, int *line_count);
+token_line alias(token_line line);
 
 #endif

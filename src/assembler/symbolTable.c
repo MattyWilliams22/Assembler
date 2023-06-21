@@ -1,9 +1,7 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include "symbolTable.h"
-#include "assembleutils.h"
 
 // Adding to Symbol Table
 void add_to_table(Symbol_Table *table, Key key, Value value) {

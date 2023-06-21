@@ -9,10 +9,11 @@ CFLAGS  ?= -std=c17 -g\
 
 all: assemble
 
-assemble: assemble.o tokenizer.o symbolTable.o assembleutils.o
-tokenizer.o: assembleutils.h tokenizer.h symbolTable.h
-symbolTable.o: symbolTable.h assembleutils.h
-assembleutils.o: assembleutils.h
+assemble: assemble.o tokenizer.o symbolTable.o assemblesetup.o assembleinstructions.o
+tokenizer.o: tokenizer.h symbolTable.h
+symbolTable.o: symbolTable.h
+assemblesetup.o: assemblesetup.h
+assembleinstructions.o: assembleinstructions.h
 
 clean:
 	$(RM) *.o assemble
