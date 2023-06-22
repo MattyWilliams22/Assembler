@@ -1,52 +1,11 @@
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
-#include <termios.h>
-#include <fcntl.h>
-#include <stdbool.h>
 #include "snake.h"
 #include "maze.h"
-
-#define TICKDELAY 100000.0
-#define SEARCHDELAY 10000
-#define WIDTH 30
-#define HEIGHT 30
-#define UP 'w'
-#define LEFT 'a'
-#define DOWN 's'
-#define RIGHT 'd'
-
-enum Mode {
-  MANUAL_MODE,
-  AUTONOMOUS_BFS_MODE,
-  AUTONOMOUS_ASTAR_MODE,
-  AUTONOMOUS_DFS_MODE,
-  AUTONOMOUS_DIJKSTRA_MODE
-};
-
-enum GridType {
-  STANDARD,
-  MAZE
-};
-
-int score;
-int highscore;
-int gameover;
-int x, y, fruitX, fruitY, flag;
-int mode;
-int gridType;
-int mazeHeight;
-int mazeWidth;
-int mazeSize;
-int gridHeight;
-int gridWidth;
-
-int tailX[100], tailY[100];
-int nTail;
-
-Component **game_grid;
+#include "global.h"
+#include "bfs.h"
+#include "a_star.h"
+#include "dfs.h"
+#include "game_utils.h"
+#include "dijkstra.h"
 
 double get_tick_speed() {
   double rate = 0.9;
@@ -55,103 +14,6 @@ double get_tick_speed() {
     multiplier *= rate;
   }
   return TICKDELAY * multiplier + 50000;
-}
-
-void get_fruit(int height, int width) {
-  while (game_grid[fruitY][fruitX] != EMPTY) {
-    fruitX = rand() % width;
-    fruitY = rand() % height;
-  }
-  game_grid[fruitY][fruitX] = FRUIT;
-}
-
-void get_start_point(int height, int width) {
-  while (game_grid[y][x] != EMPTY) {
-    x = rand() % width;
-    y = rand() % height;
-  }
-  game_grid[y][x] = HEAD;
-}
-
-int keyboard_event() {
-  struct termios oldterminal, newterminal;
-  int ch;
-  int oldf;
-
-  tcgetattr(STDIN_FILENO, &oldterminal);
-  newterminal = oldterminal;
-  newterminal.c_lflag &= ~(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newterminal);
-  oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-  fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-
-  ch = getchar();
-
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldterminal);
-  fcntl(STDIN_FILENO, F_SETFL, oldf);
-
-  if (ch != EOF) {
-    ungetc(ch, stdin);
-    return 1;
-  }
-
-  return 0;
-}
-
-void setup() {
-  system("clear");
-  gameover = 0;
-  score = 0;
-  nTail = 0;
-  flag = -1;
-  int i, j;
-  game_grid = allocate_default_grid(HEIGHT, WIDTH);
-  for (i = 0; i < WIDTH; i++) {
-    game_grid[0][i] = WALL; 
-  }
-  for (i = 0; i < HEIGHT; i++) {
-    for (j = 0; j < WIDTH; j++) {
-      if (j == 0 || j == WIDTH - 1 || i == 0 || i == HEIGHT - 1) {
-        game_grid[i][j] = WALL; 
-      } else {
-        game_grid[i][j] = EMPTY; 
-      }
-    }
-  }
-  get_start_point(HEIGHT, WIDTH);
-  get_fruit(HEIGHT, WIDTH);
-  gridHeight = HEIGHT;
-  gridWidth = WIDTH;
-}
-
-void maze_setup() {
-  printf("Enter maze height/width: ");
-  scanf("%d", &mazeHeight);
-  mazeWidth = mazeHeight;
-  printf("Enter maze size: ");
-  scanf("%d", &mazeSize);
-  Component **maze_grid = allocate_maze_grid(mazeHeight, mazeWidth, mazeSize);
-  make_maze(mazeSize, mazeHeight, mazeWidth, maze_grid);
-  game_grid = maze_grid;
-  system("clear");
-  gameover = 0;
-  x = 0;
-  y = 0;
-  gridHeight = get_grid_height(mazeHeight, mazeSize);
-  gridWidth = get_grid_width(mazeWidth, mazeSize);
-  get_start_point(gridHeight, gridWidth);
-  get_fruit(gridHeight, gridWidth);
-  score = 0;
-  nTail = 0;
-  flag = -1;
-}
-
-void draw() {
-  if (gridType == STANDARD) {
-    draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-  } else {
-    draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-  }
 }
 
 void input() {
@@ -176,6 +38,7 @@ void input() {
   }
 }
 
+<<<<<<< Updated upstream
 bool isSafe(int row, int col) {
   if (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth) {
     return (game_grid[row][col] != WALL && game_grid[row][col] != TAIL && game_grid[row][col] != HEAD);
@@ -618,6 +481,8 @@ void check_gameover() {
     }
   }
 }
+=======
+>>>>>>> Stashed changes
 
 // Set path to an array of flags, 
 // which determine the way the snake must move to reach the fruit. 

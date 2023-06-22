@@ -1,12 +1,8 @@
-typedef enum {
-  WALL,
-  HEAD,
-  TAIL,
-  FRUIT,
-  EMPTY,
-  PATH_ELEM,
-  SEARCHED  
-} Component;
+#ifndef MAZE_H
+#define MAZE_H
+
+#include "global.h"
+#include <stdbool.h>
 
 typedef struct {
     int px;
@@ -26,3 +22,5 @@ void draw_default_grid(Component **grid, int gridHeight, int gridWidth, int nTai
 int get_valid_neighbours(Cell s, int height, int width, Cell *valid_neighbours, bool **visited);
 Cell get_random_cell(Cell *cells, int num_cells);
 void clear_searched(Component **grid, int height, int width);
+
+#endif
