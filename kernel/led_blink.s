@@ -17,7 +17,7 @@ main:
         b.ne read1
 
         ldr x16, [x12]
-        and x17, x16, #0b1111
+        and x17, x16, #0xf
         
         eor x19, x17, x20
         b.ne read1
@@ -46,7 +46,7 @@ main:
         b.ne read2
 
         ldr x16, [x12]
-        and x17, x16, #0b1111
+        and x17, x16, #0xf
         
         eor x19, x17, x20
         b.ne read2
