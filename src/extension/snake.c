@@ -212,11 +212,7 @@ int calculate_path(int **parent, int *path, int srcRow, int srcCol, int destRow,
     }
     path_length++;
   } while (curr_col != srcCol || curr_row != srcRow);
-  if (gridType == STANDARD) {
-    draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-  } else {
-    draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-  }
+  draw();
   printf("Path found!\n");
   printf("Press enter to continue... \n");
   getchar();
