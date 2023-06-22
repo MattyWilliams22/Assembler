@@ -181,8 +181,6 @@ void setup_grid(int size, int height, int width, Component **grid) {
         }
     }
     draw_maze_grid(grid, height, width, size, -1, -1);
-    printf("Here is the grid before the algorithm!\n");
-    getchar();
 }
 
 void make_maze(int size, int height, int width, Component **grid) {
@@ -204,5 +202,6 @@ void make_maze(int size, int height, int width, Component **grid) {
     }
     free(visited);
     printf("Here is the grid after the algorithm!\n");
+    printf("Press enter to continue...\n");
     getchar();
 }

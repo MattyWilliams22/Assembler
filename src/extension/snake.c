@@ -125,10 +125,9 @@ void setup() {
 }
 
 void maze_setup() {
-  printf("Enter maze height: ");
+  printf("Enter maze height/width: ");
   scanf("%d", &mazeHeight);
-  printf("Enter maze width: ");
-  scanf("%d", &mazeWidth);
+  mazeWidth = mazeHeight;
   printf("Enter maze size: ");
   scanf("%d", &mazeSize);
   Component **maze_grid = allocate_maze_grid(mazeHeight, mazeWidth, mazeSize);
@@ -148,53 +147,10 @@ void maze_setup() {
 }
 
 void draw() {
-  system("clear");
-  if (nTail > 0) {
-    printf("Score: %d\n", score);
+  if (gridType == STANDARD) {
+    draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
   } else {
-    printf("Welcome to snake!\n");
-  }
-  
-  int i, j;
-  for (i = 0; i < WIDTH + 2; i++)
-    printf("#");
-  printf("\n");
-
-  for (i = 0; i < HEIGHT; i++) {
-    for (j = 0; j < WIDTH; j++) {
-      if (j == 0) {
-        printf("#");
-      }
-      if (i == y && j == x) {
-        printf("O");
-      } else if (i == fruitY && j == fruitX) {
-        printf("X");
-      } else {
-        int print = 0;
-        for (int k = 0; k < nTail; k++) {
-          if (i == tailY[k] && j == tailX[k]) {
-            printf("o");
-            print = 1;
-          }
-        }
-        if (!print) {
-          printf(" ");
-        }
-      }
-      if (j == WIDTH - 1) {
-        printf("#");
-      }
-    }
-    printf("\n");
-  }
-
-  for (i = 0; i < WIDTH + 2; i++) {
-    printf("#");
-  }
-  printf("\n");
-
-  if (nTail == 0) {
-    printf("Use WASD or Arrow Keys to move\n");
+    draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
   }
 }
 
@@ -227,71 +183,7 @@ bool isSafe(int row, int col) {
   return false;
 }
 
-int bfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
-  int dx[] = {0, 0, -1, 1};
-  int dy[] = {-1, 1, 0, 0};
-  
-  bool visited[gridHeight][gridWidth];
-  for (int i = 0; i < gridHeight; i++) {
-    for (int j = 0; j < gridWidth; j++) {
-      visited[i][j] = false;
-    }
-  }
-
-  int queue[gridHeight * gridWidth];
-  int front = 0, rear = 0;
-
-  visited[srcRow][srcCol] = true;
-
-  if (game_grid[srcRow][srcCol] == EMPTY) {
-    game_grid[srcRow][srcCol] = SEARCHED;
-    if (gridType == STANDARD) {
-      draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-    } else {
-      draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-    }
-  }
-
-  queue[rear++] = srcRow * gridWidth + srcCol;
-
-  int parent[gridHeight][gridWidth];
-  for (int i = 0; i < gridHeight; i++) {
-    for (int j = 0; j < gridWidth; j++) {
-      parent[i][j] = -1;
-    }
-  }
-
-  while (front != rear) {
-    int currRow = queue[front] / gridWidth;
-    int currCol = queue[front] % gridWidth;
-    front++;
-
-    if (currRow == destRow && currCol == destCol) {
-      break;
-    }
-
-    for (int i = 0; i < 4; i++) {
-      int newRow = currRow + dx[i];
-      int newCol = currCol + dy[i];
-      if (isSafe(newRow, newCol) && !visited[newRow][newCol]) {
-        visited[newRow][newCol] = true;
-
-        if (game_grid[newRow][newCol] == EMPTY) {
-          game_grid[newRow][newCol] = SEARCHED;
-          usleep(SEARCHDELAY);
-          if (gridType == STANDARD) {
-            draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-          } else {
-            draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-          }
-        }
-
-        queue[rear++] = newRow * WIDTH + newCol;
-        parent[newRow][newCol] = currRow * WIDTH + currCol;
-      }
-    }
-  }
-
+int calculate_path(int **parent, int *path, int srcRow, int srcCol, int destRow, int destCol) {
   int path_length = 0;
   int curr_row = destRow;
   int curr_col = destCol;
@@ -325,18 +217,14 @@ int bfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
   } else {
     draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
   }
-  printf("Here is the shortest path to the fruit!\n");
-  printf("Press any key to continue... \n");
+  printf("Path found!\n");
+  printf("Press enter to continue... \n");
   getchar();
   clear_searched(game_grid, gridHeight, gridWidth);
   return path_length;
 }
 
-int calculateHCost(int row, int col, int destRow, int destCol) {
-  return abs(destRow - row) + abs(destCol - col);
-}
-
-int aStar(int srcRow, int srcCol, int destRow, int destCol, int *path) {
+int bfs(int **parent, int srcRow, int srcCol, int destRow, int destCol, int *path) {
   int dx[] = {0, 0, -1, 1};
   int dy[] = {-1, 1, 0, 0};
   
@@ -354,16 +242,74 @@ int aStar(int srcRow, int srcCol, int destRow, int destCol, int *path) {
 
   if (game_grid[srcRow][srcCol] == EMPTY) {
     game_grid[srcRow][srcCol] = SEARCHED;
-    if (gridType == STANDARD) {
-      draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-    } else {
-      draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-    }
+    draw();
   }
 
   queue[rear++] = srcRow * gridWidth + srcCol;
 
-  int parent[gridHeight][gridWidth];
+  for (int i = 0; i < gridHeight; i++) {
+    for (int j = 0; j < gridWidth; j++) {
+      parent[i][j] = -1;
+    }
+  }
+
+  while (front != rear) {
+    int currRow = queue[front] / gridWidth;
+    int currCol = queue[front] % gridWidth;
+    front++;
+
+    if (currRow == destRow && currCol == destCol) {
+      break;
+    }
+
+    for (int i = 0; i < 4; i++) {
+      int newRow = currRow + dx[i];
+      int newCol = currCol + dy[i];
+      if (isSafe(newRow, newCol) && !visited[newRow][newCol]) {
+        visited[newRow][newCol] = true;
+
+        if (game_grid[newRow][newCol] == EMPTY) {
+          game_grid[newRow][newCol] = SEARCHED;
+          usleep(SEARCHDELAY);
+          draw();
+        }
+
+        queue[rear++] = newRow * gridWidth + newCol;
+        parent[newRow][newCol] = currRow * gridWidth + currCol;
+      }
+    }
+  }
+
+  return calculate_path(parent, path, srcRow, srcCol, destRow, destCol);
+}
+
+int calculateHCost(int row, int col, int destRow, int destCol) {
+  return abs(destRow - row) + abs(destCol - col);
+}
+
+int aStar(int **parent, int srcRow, int srcCol, int destRow, int destCol, int *path) {
+  int dx[] = {0, 0, -1, 1};
+  int dy[] = {-1, 1, 0, 0};
+  
+  bool visited[gridHeight][gridWidth];
+  for (int i = 0; i < gridHeight; i++) {
+    for (int j = 0; j < gridWidth; j++) {
+      visited[i][j] = false;
+    }
+  }
+
+  int queue[gridHeight * gridWidth];
+  int front = 0, rear = 0;
+
+  visited[srcRow][srcCol] = true;
+
+  if (game_grid[srcRow][srcCol] == EMPTY) {
+    game_grid[srcRow][srcCol] = SEARCHED;
+    draw();
+  }
+
+  queue[rear++] = srcRow * gridWidth + srcCol;
+
   for (int i = 0; i < gridHeight; i++) {
     for (int j = 0; j < gridWidth; j++) {
       parent[i][j] = -1;
@@ -410,15 +356,11 @@ int aStar(int srcRow, int srcCol, int destRow, int destCol, int *path) {
         if (game_grid[newRow][newCol] == EMPTY) {
           game_grid[newRow][newCol] = SEARCHED;
           usleep(SEARCHDELAY);
-          if (gridType == STANDARD) {
-            draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-          } else {
-            draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-          }
+          draw();
         }
 
-        queue[rear++] = newRow * WIDTH + newCol;
-        parent[newRow][newCol] = currRow * WIDTH + currCol;
+        queue[rear++] = newRow * gridWidth + newCol;
+        parent[newRow][newCol] = currRow * gridWidth + currCol;
 
         int newGCost = gCost[currRow][currCol] + 1;
         if (newGCost < gCost[newRow][newCol]) {
@@ -428,47 +370,10 @@ int aStar(int srcRow, int srcCol, int destRow, int destCol, int *path) {
     }
   }
 
-  int path_length = 0;
-  int curr_row = destRow;
-  int curr_col = destCol;
-  int prev_col;
-  int prev_row;
-  do {
-    prev_col = curr_col;
-    prev_row = curr_row;
-    if (game_grid[prev_row][prev_col] == EMPTY || game_grid[prev_row][prev_col] == SEARCHED) {
-      game_grid[prev_row][prev_col] = PATH_ELEM;
-    }
-    int parent_index = parent[curr_row][curr_col];
-    if (parent_index == -1) {
-      printf("ERROR\n");
-    }
-    curr_row = parent_index / gridWidth;
-    curr_col = parent_index % gridWidth;
-    if (curr_row < prev_row) {
-      path[path_length] = 2;
-    } else if (curr_row > prev_row) {
-      path[path_length] = 1;
-    } else if (curr_col < prev_col) {
-      path[path_length] = 4;
-    } else if (curr_col > prev_col) {
-      path[path_length] = 3;
-    }
-    path_length++;
-  } while (curr_col != srcCol || curr_row != srcRow);
-  if (gridType == STANDARD) {
-    draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-  } else {
-    draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-  }
-  printf("Here is the shortest path to the fruit!\n");
-  printf("Press any key to continue... \n");
-  getchar();
-  clear_searched(game_grid, gridHeight, gridWidth);
-  return path_length;
+  return calculate_path(parent, path, srcRow, srcCol, destRow, destCol);
 }
 
-int dijkstra(int srcRow, int srcCol, int destRow, int destCol, int *path) {
+int dijkstra(int **parent, int srcRow, int srcCol, int destRow, int destCol, int *path) {
   int dx[] = {0, 0, -1, 1};
   int dy[] = {-1, 1, 0, 0};
   
@@ -486,16 +391,11 @@ int dijkstra(int srcRow, int srcCol, int destRow, int destCol, int *path) {
 
   if (game_grid[srcRow][srcCol] == EMPTY) {
     game_grid[srcRow][srcCol] = SEARCHED;
-    if (gridType == STANDARD) {
-      draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-    } else {
-      draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-    }
+    draw();
   }
 
   queue[rear++] = srcRow * gridWidth + srcCol;
 
-  int parent[gridHeight][gridWidth];
   for (int i = 0; i < gridHeight; i++) {
     for (int j = 0; j < gridWidth; j++) {
       parent[i][j] = -1;
@@ -541,15 +441,11 @@ int dijkstra(int srcRow, int srcCol, int destRow, int destCol, int *path) {
         if (game_grid[newRow][newCol] == EMPTY) {
           game_grid[newRow][newCol] = SEARCHED;
           usleep(SEARCHDELAY);
-          if (gridType == STANDARD) {
-            draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-          } else {
-            draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-          }
+          draw();
         }
 
-        queue[rear++] = newRow * WIDTH + newCol;
-        parent[newRow][newCol] = currRow * WIDTH + currCol;
+        queue[rear++] = newRow * gridWidth + newCol;
+        parent[newRow][newCol] = currRow * gridWidth + currCol;
 
         int newGCost = gCost[currRow][currCol] + 1;
         if (newGCost < gCost[newRow][newCol]) {
@@ -559,47 +455,10 @@ int dijkstra(int srcRow, int srcCol, int destRow, int destCol, int *path) {
     }
   }
 
-  int path_length = 0;
-  int curr_row = destRow;
-  int curr_col = destCol;
-  int prev_col;
-  int prev_row;
-  do {
-    prev_col = curr_col;
-    prev_row = curr_row;
-    if (game_grid[prev_row][prev_col] == EMPTY || game_grid[prev_row][prev_col] == SEARCHED) {
-      game_grid[prev_row][prev_col] = PATH_ELEM;
-    }
-    int parent_index = parent[curr_row][curr_col];
-    if (parent_index == -1) {
-      printf("ERROR\n");
-    }
-    curr_row = parent_index / gridWidth;
-    curr_col = parent_index % gridWidth;
-    if (curr_row < prev_row) {
-      path[path_length] = 2;
-    } else if (curr_row > prev_row) {
-      path[path_length] = 1;
-    } else if (curr_col < prev_col) {
-      path[path_length] = 4;
-    } else if (curr_col > prev_col) {
-      path[path_length] = 3;
-    }
-    path_length++;
-  } while (curr_col != srcCol || curr_row != srcRow);
-  if (gridType == STANDARD) {
-    draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-  } else {
-    draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-  }
-  printf("Here is the shortest path to the fruit!\n");
-  printf("Press any key to continue... \n");
-  getchar();
-  clear_searched(game_grid, gridHeight, gridWidth);
-  return path_length;
+  return calculate_path(parent, path, srcRow, srcCol, destRow, destCol);
 }
 
-int dfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
+int dfs(int **parent, int srcRow, int srcCol, int destRow, int destCol, int *path) {
   int dx[] = {0, 0, -1, 1};
   int dy[] = {-1, 1, 0, 0};
   
@@ -617,16 +476,11 @@ int dfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
 
   if (game_grid[srcRow][srcCol] == EMPTY) {
     game_grid[srcRow][srcCol] = SEARCHED;
-    if (gridType == STANDARD) {
-      draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-    } else {
-      draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-    }
+    draw();
   }
 
   stack[++top] = srcRow * gridWidth + srcCol;
 
-  int parent[gridHeight][gridWidth];
   for (int i = 0; i < gridHeight; i++) {
     for (int j = 0; j < gridWidth; j++) {
       parent[i][j] = -1;
@@ -651,59 +505,17 @@ int dfs(int srcRow, int srcCol, int destRow, int destCol, int *path) {
         if (game_grid[newRow][newCol] == EMPTY) {
           game_grid[newRow][newCol] = SEARCHED;
           usleep(SEARCHDELAY);
-          if (gridType == STANDARD) {
-            draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-          } else {
-            draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-          }
+          draw();
         }
 
-        stack[++top] = newRow * WIDTH + newCol;
-        parent[newRow][newCol] = currRow * WIDTH + currCol;
+        stack[++top] = newRow * gridWidth + newCol;
+        parent[newRow][newCol] = currRow * gridWidth + currCol;
       }
     }
   }
 
-  int path_length = 0;
-  int curr_row = destRow;
-  int curr_col = destCol;
-  int prev_col;
-  int prev_row;
-  do {
-    prev_col = curr_col;
-    prev_row = curr_row;
-    if (game_grid[prev_row][prev_col] == EMPTY || game_grid[prev_row][prev_col] == SEARCHED) {
-      game_grid[prev_row][prev_col] = PATH_ELEM;
-    }
-    int parent_index = parent[curr_row][curr_col];
-    if (parent_index == -1) {
-      printf("ERROR\n");
-    }
-    curr_row = parent_index / gridWidth;
-    curr_col = parent_index % gridWidth;
-    if (curr_row < prev_row) {
-      path[path_length] = 2;
-    } else if (curr_row > prev_row) {
-      path[path_length] = 1;
-    } else if (curr_col < prev_col) {
-      path[path_length] = 4;
-    } else if (curr_col > prev_col) {
-      path[path_length] = 3;
-    }
-    path_length++;
-  } while (curr_col != srcCol || curr_row != srcRow);
-  if (gridType == STANDARD) {
-    draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-  } else {
-    draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-  }
-  printf("Path found (it might not be the shortest)!\n");
-  printf("Press any key to continue... \n");
-  getchar();
-  clear_searched(game_grid, gridHeight, gridWidth);
-  return path_length;
+  return calculate_path(parent, path, srcRow, srcCol, destRow, destCol);
 }
-
 
 void check_collision_default() {
     if (game_grid[y][x] == TAIL || game_grid[y][x] == WALL) {
@@ -815,24 +627,33 @@ void check_gameover() {
 // which determine the way the snake must move to reach the fruit. 
 // Return the number of moves the snake must make to reach the fruit.
 int get_path(int *path) {
+  int **parent;
+  parent = malloc(gridHeight * sizeof(*parent));
+  for (int i = 0; i < gridHeight; i++) {
+    parent[i] = malloc(gridWidth * sizeof(*parent[i]));
+  }
   int path_length = 0;
   // Calculate path
   switch (mode) {
     case AUTONOMOUS_BFS_MODE:
-      path_length = bfs(y, x, fruitY, fruitX, path);
+      path_length = bfs(parent, y, x, fruitY, fruitX, path);
       break;
     case AUTONOMOUS_ASTAR_MODE:
-      path_length = aStar(y, x, fruitY, fruitX, path);
+      path_length = aStar(parent, y, x, fruitY, fruitX, path);
       break;
     case AUTONOMOUS_DIJKSTRA_MODE:
-      path_length = dijkstra(y, x, fruitY, fruitX, path);
+      path_length = dijkstra(parent, y, x, fruitY, fruitX, path);
       break;
     case AUTONOMOUS_DFS_MODE:
-      path_length = dfs(y, x, fruitY, fruitX, path);
+      path_length = dfs(parent, y, x, fruitY, fruitX, path);
       break;
     default:
       break;
   }
+  for (int i = 0; i < gridHeight; i++) {
+    free(parent[i]);
+  }
+  free(parent);
   return path_length;
 }
 
@@ -843,11 +664,7 @@ void ai_loop() {
   while (!gameover) {
     path_length = get_path(path);
     while (path_length > 0 && !gameover) {
-      if (gridType == STANDARD) {
-        draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-      } else {
-        draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-      }
+      draw();
       if (keyboard_event()) {
         char key = getchar();
         if (key == 'x') {
@@ -886,31 +703,25 @@ int main() {
   highscore = 0;
   if (gridType == STANDARD) {
     setup();
-    if (mode == MANUAL_MODE) {
-      while (1) {
-        draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);
-        input();
-        logic();
-        check_gameover();
-        usleep(get_tick_speed());
-      }
-    } else {
-      ai_loop();
-    }
-    free_default_grid(game_grid, HEIGHT);
-  } else if (gridType == MAZE) {
+  } else {
     maze_setup();
-    if (mode == MANUAL_MODE) {
-      while (1) {
-        draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
-        input();
-        logic();
-        check_gameover();
-        usleep(TICKDELAY);
-      }
-    } else {
-      ai_loop();
+  }
+
+  if (mode == MANUAL_MODE) {
+    while (1) {
+      draw();
+      input();
+      logic();
+      check_gameover();
+      usleep(get_tick_speed());
     }
+  } else {
+    ai_loop();
+  }
+
+  if (gridType == STANDARD) {
+    free_default_grid(game_grid, HEIGHT);
+  } else {
     free_maze_grid(game_grid, mazeHeight, mazeSize);
   }
   return 0;
