@@ -46,6 +46,8 @@ We believe that our testing was effective and we were able to fix all bugs in ou
 First we focused on turning on the green LED. The hardest part was to understand what is meant by 16-byte aligned address and 
 how to implement it without using ".align 4" directive as it is not supported by our Assembler. After ensuring our buffer was 
 at right address we were able to turn on the LED.
+\newline
+The corresponing code is in ledon.s.
 
 \subsection{Turning off LED}
 This part is essentially the same as the first part but just changing one of the tags of our buffer. However, for some reason 
@@ -59,6 +61,11 @@ until register value is 0.
 During our implementation, we encoutered the problem of our mailbox getting full.
 To deal with that we have to read responses from it, which in turn was overwriting our buffer. 
 To solve that, before each use of buffer we reset it to correct value.
+\newline
+\newline
+In led\_blink.s we don't reset the buffer, but led turns on.
+\newline
+In led\_blink\_reset\_buffer.s we reset the buffer, but led doesn't turn on/blink.
 
 \section{Extension}
 
@@ -185,21 +192,37 @@ a large number of users testing the game. However, since Snake is a fairly simpl
 
 \section{Group Reflection}
 
-Since the start of the project we have had weekly group meetings in the library to discuss the project in
-detail and split up the workload between the four of us. Between these meetings we have been letting eachother 
-know exactly what part of the code we are about to work on in order to avoid situations where two people do the 
-same work. Our communication has meant that we have always known what our next step is individually as well as 
-being able to track our progress as a group and make sure we are progressing at a good pace.
-For our future group projects, we learned that we should spend time figuring out which parts of the project can 
-be completed at the same time as this allows for work to be split up more effectively.
-In the future we hope to have the same high level of communication with our groups for group projects as it 
-speeds up work dramatically.
+We maintainedgood level of communication throughout whole project. We held weekly meeting where we discussed
+our current progress, updates and addressed any problems or concerns. This helped us identify potential issues early on 
+and provide support to other members who have fallen behind on existing tasks. 
+\newline 
+Additionally, we recognise how important it is to keep goode code style and hygiene. By having regular code reviews,
+we kept our code clean, well-structured and readable for other team members. This made it easier to follow each other and 
+collaborate more effectively. 
+\newline
+Looking back, we identified areas where parallelisation could have been implemented to significanly increase our working pace. 
+By figuring that out earlier, we could have split the work more efficiently based on our strengths and knowledge.
+This realisation will be a valuable lesson as we moved on to future projects.
+\newline
+In future, we aim to maintain the same high level of communication and collaboration as we as we established in this project.
+We recognised how important are regular meetings, code reviews, clear updates and active communication helped us 
+to effectively increase our working pace and collaboration.
 
 \section{Individual Reflections}
 
 \subsection{Dina Duong}
 
-abcd
+I believe that I fit well in the group and maintained good communication. 
+As it was pointed out by one group member, I need to be more clear on what I am working on and provide more regular updates. 
+Moving forward I will make more effort to provide more frequent updates to keep everyone informed and on the same page.
+\newline
+I enjoyed working on Emulator and assisting with debugging Assembler. Being the only JMC student in the group,
+it became apparent that I should take the lead on Part 3 as the only one knowing ARM Assembly.
+It was a good experience showing my knowledge in this area and the importance of diverse expertise within the team.
+\newline
+This project provided an opportunity to enhance my skills in Git as a collaborative tool. While I had previously used Git in 
+smaller group projects, working on this larger-scale project help me hone my skills, such as merging branched and resolving conflicts.
+These skills will undoubtely prove invaluable in future both group and individual projects.
 
 \subsection{Maciej Rytlewski}
 
