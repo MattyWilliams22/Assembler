@@ -79,3 +79,23 @@ void draw() {
     draw_maze_grid(game_grid, mazeHeight, mazeWidth, mazeSize, nTail, score);
   }
 }
+
+void setup_pathfinding(bool visited[gridHeight][gridWidth], int **parent, int srcRow, int srcCol) {
+  for (int i = 0; i < gridHeight; i++) {
+    for (int j = 0; j < gridWidth; j++) {
+      visited[i][j] = false;
+      parent[i][j] = -1;
+    }
+  }
+  visited[srcRow][srcCol] = true;
+
+  search_and_draw(srcRow, srcCol);
+}
+
+void search_and_draw(int row, int col) {
+  if (game_grid[row][col] == EMPTY) {
+    game_grid[row][col] = SEARCHED;
+    usleep(SEARCHDELAY);
+    draw();
+  }
+}

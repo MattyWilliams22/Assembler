@@ -12,5 +12,7 @@
 bool isSafe(int row, int col);
 int calculate_path(int **parent, int *path, int srcRow, int srcCol, int destRow, int destCol);
 void draw();
+void setup_pathfinding(bool visited[gridHeight][gridWidth], int **parent, int srcRow, int srcCol);
+void search_and_draw(int row, int col);
 
 #endif

@@ -16,33 +16,14 @@ int calculateHCost(int row, int col, int destRow, int destCol) {
 }
 
 int aStar(int **parent, int srcRow, int srcCol, int destRow, int destCol, int *path) {
-  int dx[] = {0, 0, -1, 1};
-  int dy[] = {-1, 1, 0, 0};
-  
+  int dx[4] = {0, 0, -1, 1};
+  int dy[4] = {-1, 1, 0, 0};
   bool visited[gridHeight][gridWidth];
-  for (int i = 0; i < gridHeight; i++) {
-    for (int j = 0; j < gridWidth; j++) {
-      visited[i][j] = false;
-    }
-  }
+  setup_pathfinding(visited, parent, srcRow, srcCol);
 
   int queue[gridHeight * gridWidth];
   int front = 0, rear = 0;
-
-  visited[srcRow][srcCol] = true;
-
-  if (game_grid[srcRow][srcCol] == EMPTY) {
-    game_grid[srcRow][srcCol] = SEARCHED;
-    draw();
-  }
-
   queue[rear++] = srcRow * gridWidth + srcCol;
-
-  for (int i = 0; i < gridHeight; i++) {
-    for (int j = 0; j < gridWidth; j++) {
-      parent[i][j] = -1;
-    }
-  }
 
   int gCost[gridHeight][gridWidth];
   for (int i = 0; i < gridHeight; i++) {
@@ -80,13 +61,7 @@ int aStar(int **parent, int srcRow, int srcCol, int destRow, int destCol, int *p
       int newCol = currCol + dy[i];
       if (isSafe(newRow, newCol) && !visited[newRow][newCol]) {
         visited[newRow][newCol] = true;
-
-        if (game_grid[newRow][newCol] == EMPTY) {
-          game_grid[newRow][newCol] = SEARCHED;
-          usleep(SEARCHDELAY);
-          draw();
-        }
-
+        search_and_draw(newRow, newCol);
         queue[rear++] = newRow * gridWidth + newCol;
         parent[newRow][newCol] = currRow * gridWidth + currCol;
 
