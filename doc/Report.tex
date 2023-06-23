@@ -42,7 +42,23 @@ We believe that our testing was effective and we were able to fix all bugs in ou
 
 \section{Raspberry Pi Implementation}
 
-This is how we implemented Part III
+\subsection{Turning on LED}
+First we focused on turning on the green LED. The hardest part was to understand what is meant by 16-byte aligned address and 
+how to implement it without using ".align 4" directive as it is not supported by our Assembler. After ensuring our buffer was 
+at right address we were able to turn on the LED.
+
+\subsection{Turning off LED}
+This part is essentially the same as the first part but just changing one of the tags of our buffer. However, for some reason 
+our code is not turning off the LED.
+
+\subsection{Wait for fixed amount of time}
+We implemented this by moving a large enough number to one of the registers, subtracting 1 each time and branching off 
+until register value is 0.
+
+\subsection{Handling mailbox}
+During our implementation, we encoutered the problem of our mailbox getting full.
+To deal with that we have to read responses from it, which in turn was overwriting our buffer. 
+To solve that, before each use of buffer we reset it to correct value.
 
 \section{Extension}
 
