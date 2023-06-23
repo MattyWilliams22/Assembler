@@ -22,23 +22,22 @@ We split up the code for our assembler into multiple files each with their own p
 The assembler is split up into the following files:
 
 \begin{itemize}
-    \item Main File: This file contains the basic structure of the assembler, calling the necessary functions to tokenize the input file, assemble the binary and print the binary to the ouput file.
-    \item Tokenizer: This file is responsible for reading the text file, processing the text line by line into tokens and outputting an array of tokenised lines.
+    \item Main File: This file contains the basic structure of the assembler, calling the necessary functions to tokenize the input file, assemble the binary and write the binary to the ouput file.
+    \item Tokenizer: This file is responsible for reading the input file, processing the text line by line into tokens and outputting an array of tokenised lines.
     \item Symbol Table: This file contains the functions required to manipulate the symbol table ADT.
-    \item Instructions: This file contains all of the functions responsible for converting operands to their corresponding binary form and assembling a line of binary from a line of tokens.
+    \item Instructions: This file contains all of the functions responsible for converting opcodes and operands to their corresponding binary form and assembling a line of binary from a line of tokens.
     \item Setup: This file is responsible for file handling, memory allocation and freeing. 
 \end{itemize}
 
 \subsection{Assembler Testing}
 We used the following tools to test our assembler:
 \begin{itemize}
-    \item Testsuite
-    \item Continuous integration with gitlab
-    \item Print messages
-    \item GDB
-    \item Valgrind
+    \item Testsuite: We ran the testsuite to see which tests were not compiling or were giving an incorrect output.
+    \item Continuous Integration: We used this feature in Gitlab to test if a commit compiled correctly.
+    \item Print Messages: We added several print messages to our code which made it easy to spot where the assembly was going wrong for incorrect test cases. 
+    \item GDB and Valgrind: We used gdb and valgrind to test for memory leaks and see exactly where these leaks were located in our code.
 \end{itemize}
-We believe that our testing was effective and we were able to fix all bugs in our assembler and pass all of the test cases.
+We believe that our testing was very effective as we were able to fix all of the bugs in our assembler and pass all of the test cases.
 
 \section{Raspberry Pi Implementation}
 
@@ -276,7 +275,7 @@ Another weakness of mine that was pointed out by my group is the fact that I don
 After receiving this feedback I made an effort to comment the purpose of every function or confusing block of code that I wrote to make it easier for others to spot errors
 in and fix my code where necessary.
 \newline
-I feel that a strength of mine was the ability to problem solve as I was able to come up with a way to parse the input file into an array of tokenised lines which could then
+I feel that a strength of mine was the ability to problem solve as I was able to come up with a way to tokenise the input file into an array of tokenised lines which could then
 be assembled into binary. I was also able to fix problems with the implementation of the pathfinding algorithms in the extension.   
 \newline
 As a group I believe that we worked very well and we all got along well with eachother. In future projects I would like to be just as communicative, however I would split the
