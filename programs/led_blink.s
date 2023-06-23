@@ -12,7 +12,7 @@ main:
     ldr x12, MailboxAddress
     movk x20, #0x8
     read1:
-        ldr x13, [x12, #0x38]
+        ldr x13, [x12, #0x18]
         tst x13, #0x40000000
         b.ne read1
 
@@ -41,7 +41,7 @@ main:
 
     movk x20, #0x8
     read2:
-        ldr x13, [x12, #0x38]
+        ldr x13, [x12, #0x18]
         tst x13, #0x40000000
         b.ne read2
 
