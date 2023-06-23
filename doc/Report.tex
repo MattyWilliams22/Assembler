@@ -189,9 +189,9 @@ The extension is split up into the following files.
     \item Manual Mode: One problem was that the user needed to be able to control the snake without pressing the Enter key after each move. This would not be possible in a regular terminal 
     so we used the terminal in non canonical mode. This allowed us to read input as soon as it was available.
     \item Animation: We needed to animate the movements of the snake. We did this by clearing the terminal and redrawing the grid after each move. This could possibly be improved by using external libraries.
-    \item Printing searches: One significant problem was printing the searches as they happened. While the search happened, this was not educational on its own as there was no 
-    visualisation of the search. We experimented with having a separate grid to show the search as it happened but this was not very effective. We decided to pause the game every time the fruit is reached, 
-    show the search happening and the shortest path found, then continue the search. This was a good compromise between showing the search and not interrupting the game too much.
+    \item Visualising algorithms: One significant problem was visualising each path-finding algorithm. While it was easy to write the algorithm, it was far harder to show it to the user in an educational way. 
+    We experimented with drawing 2 grids simultaneously, one for the visualisation and one for the game, but this looked messy.In the end, we decided to pause the game every time a fruit is reached, show the algorithm 
+    searching for the fruit and then the snake moving along the path determined by the algorithm. This was a good compromise between showing the search and not interrupting the game too much.
     \item Maze Generation: We also found it difficult to integrate our maze generation algorithm with the game. We used print debugging to find the problem and fixed it.
     \item Memory Leaks: We also had memory leaks in our code which we fixed using Valgrind.
 \end{itemize}
