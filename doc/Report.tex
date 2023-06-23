@@ -46,6 +46,8 @@ We believe that our testing was effective and we were able to fix all bugs in ou
 First we focused on turning on the green LED. The hardest part was to understand what is meant by 16-byte aligned address and 
 how to implement it without using ".align 4" directive as it is not supported by our Assembler. After ensuring our buffer was 
 at right address we were able to turn on the LED.
+\newline
+The corresponing code is in ledon.s.
 
 \subsection{Turning off LED}
 This part is essentially the same as the first part but just changing one of the tags of our buffer. However, for some reason 
@@ -56,9 +58,14 @@ We implemented this by moving a large enough number to one of the registers, sub
 until register value is 0.
 
 \subsection{Handling mailbox}
-During our implementation, we encoutered the problem of our mailbox getting full.
+
+During our implementation, we encountered the problem of our mailbox getting full.
 To deal with that we have to read responses from it, which in turn was overwriting our buffer. 
 To solve that, before each use of buffer we reset it to correct value.
+\\[1\baselineskip]
+In led\_blink.s we don't reset the buffer, but led turns on.
+\newline
+In led\_blink\_reset\_buffer.s we reset the buffer, but led doesn't turn on/blink.
 
 \section{Extension}
 
@@ -77,18 +84,22 @@ The following screenshots show an example of the snake game being used with a Ra
 \graphicspath{ {./images/} }
 
 \begin{figure}[H]
+\centering
 
 \begin{subfigure}{0.3\textwidth}
+    \centering
     \includegraphics[scale=0.7]{Setup_1} 
     \caption{First setup screen allows switching between a standard grid and a random maze}
     \label{fig:subim1}
 \end{subfigure}
 \begin{subfigure}{0.3\textwidth}
+    \centering
     \includegraphics[scale=0.7]{Setup_2}
-    \caption{Second setup screen allows user to choose moode of operation}
+    \caption{Second setup screen allows user to choose mode of operation}
     \label{fig:subim2}
 \end{subfigure}
 \begin{subfigure}{0.3\textwidth}
+    \centering
     \includegraphics[scale=0.7]{Maze_Generation}
     \caption{Maze setup screen allows user to decide on height and width of grid as well as density of maze}
     \label{fig:subim3}
@@ -101,24 +112,28 @@ The following screenshots show an example of the snake game being used with a Ra
 \begin{figure}[H]
 \centering
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{BFS_Path_found} 
     \caption{BFS}
-    \label{fig:subim1}
+    \label{fig:subim4}
 \end{subfigure}
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{A_Star_Path_Found}
     \caption{A*}
-    \label{fig:subim2}
+    \label{fig:subim5}
 \end{subfigure}
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{DFS_Path_Found}
     \caption{DFS}
-    \label{fig:subim3}
+    \label{fig:subim6}
 \end{subfigure}
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{Dijkstra_Path_Found}
     \caption{Dijkstra}
-    \label{fig:subim4}
+    \label{fig:subim7}
 \end{subfigure}
 
 \caption{If autonomous mode is selected on a standard grid, the algorithm first performs a search using the specified algorithm. Dijkstra search is similar to BFS due to equal weights. 
@@ -129,24 +144,28 @@ The screen then displays the shortest path found (or any path in the case of DFS
 \begin{figure}[H]
 \centering
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{Maze_Generated} 
     \caption{Maze generated}
-    \label{fig:subim1}
+    \label{fig:subim8}
 \end{subfigure}
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{A_Star_Search_Maze}
     \caption{A* search}
-    \label{fig:subim2}
+    \label{fig:subim9}
 \end{subfigure}
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{A_Star_Path_Found_Maze}
     \caption{A path is found}
-    \label{fig:subim3}
+    \label{fig:subim10}
 \end{subfigure}
 \begin{subfigure}{0.24\textwidth}
+    \centering
     \includegraphics[height=6.5cm]{A_Star_Move_Maze}
     \caption{Snake moves}
-    \label{fig:subim4}
+    \label{fig:subim11}
 \end{subfigure}
 
 \caption{If the user selects a random maze, the process is very similar but a maze is first generated}
@@ -172,7 +191,7 @@ The extension is split up into the following files.
     so we used the terminal in non canonical mode. This allowed us to read input as soon as it was available.
     \item Animation: We needed to animate the movements of the snake. We did this by clearing the terminal and redrawing the grid after each move. This could possibly be improved by using external libraries.
     \item Printing searches: One significant problem was printing the searches as they happened. While the search happened, this was not educational on its own as there was no 
-    visualisation of the search. We experimented with having a separate grind to show the search as it happened but this was not very effective. We decided to pause the game every time the fruit is reached, 
+    visualisation of the search. We experimented with having a separate grid to show the search as it happened but this was not very effective. We decided to pause the game every time the fruit is reached, 
     show the search happening and the shortest path found, then continue the search. This was a good compromise between showing the search and not interrupting the game too much.
     \item Maze Generation: We also found it difficult to integrate our maze generation algorithm with the game. We used print debugging to find the problem and fixed it.
     \item Memory Leaks: We also had memory leaks in our code which we fixed using Valgrind.
@@ -185,48 +204,63 @@ a large number of users testing the game. However, since Snake is a fairly simpl
 
 \section{Group Reflection}
 
-Since the start of the project we have had weekly group meetings in the library to discuss the project in
-detail and split up the workload between the four of us. Between these meetings we have been letting eachother 
-know exactly what part of the code we are about to work on in order to avoid situations where two people do the 
-same work. Our communication has meant that we have always known what our next step is individually as well as 
-being able to track our progress as a group and make sure we are progressing at a good pace.
-For our future group projects, we learned that we should spend time figuring out which parts of the project can 
-be completed at the same time as this allows for work to be split up more effectively.
-In the future we hope to have the same high level of communication with our groups for group projects as it 
-speeds up work dramatically.
+We maintained a good level of communication throughout the whole project. We held weekly meetings where we discussed
+our current progress and addressed any problems or concerns. This helped us identify potential issues early on 
+and provide support to other members who have fallen behind on existing tasks. 
+\newline 
+Additionally, we recognise how important it is to keep good code style and hygiene. By having regular code reviews,
+we kept our code clean, well-structured and readable for other team members. This made it easier to follow each other's code and 
+collaborate more effectively. 
+\newline
+Looking back, we identified areas where parallelisation could have been implemented to significantly increase our working pace. 
+By figuring that out earlier, we could have split the work more efficiently based on our strengths and knowledge.
+This realisation will be a valuable lesson as we moved on to future projects.
+\newline
+In the future, we aim to maintain the same high level of communication and collaboration as we established in this project.
+We recognised how important regular meetings are and how code reviews, clear updates and active communication helped us 
+to effectively increase our working pace and collaboration.
 
 \section{Individual Reflections}
 
 \subsection{Dina Duong}
 
-abcd
+I believe that I fit well in the group and maintained good communication. 
+As it was pointed out by one group member, I need to be more clear on what I am working on and provide more regular updates. 
+Moving forward I will make more effort to provide more frequent updates to keep everyone informed and on the same page.
+\newline
+I enjoyed working on Emulator and assisting with debugging Assembler. Being the only JMC student in the group,
+it became apparent that I should take the lead on Part 3 as the only one knowing ARM Assembly.
+It was a good experience showing my knowledge in this area and the importance of diverse expertise within the team.
+\newline
+This project provided an opportunity to enhance my skills in Git as a collaborative tool. While I had previously used Git in 
+smaller group projects, working on this larger-scale project help me hone my skills, such as merging branched and resolving conflicts.
+These skills will undoubtedly prove invaluable in future both group and individual projects.
 
 \subsection{Maciej Rytlewski}
 
-Based on my experiences during this project, as well as, feedback from my peers, I believe that I fit into the group very well and I found it easy to integrate into 
-the group and get on well with the other members. I really enjoyed participating in this project, having worked on a large part of the Emulator, Assembler and assisting with part 3 
-of the project too. To my own surprise, over the span of this project, I turned out to be our main code debugger, having debugged and fixed majority of the errors that were causing test failures 
-within the Emulator and Assembler, which I did not expect to be a strength of mine. Due to this, I greatly developed my skills in using GDB to debug code, which turned out to be 
-extremely useful to find the source of the errors within the code, which without GDB would've been much more difficult. On the other hand, I found that I quite struggled with 
+Based on my experiences during this project, as well as, feedback from my peers, I believe that I fit into the group very well and got on well with the other members. I really enjoyed participating 
+in this project, having worked on a large part of the Emulator, Assembler and assisting with part 3 of the project too. To my own surprise, over the span of this project, I turned out to be 
+our main code debugger, having debugged and fixed majority of the errors that were causing test failures within the Emulator and Assembler, which I did not expect to be a strength of mine. 
+Due to this, I greatly developed my skills in using GDB to debug code, which turned out to be extremely useful to find the source of the errors within the code. On the other hand, I found that I quite struggled with 
 the implementation of our Symbol Table ADT which I needed one of the other members to have a look at and help me with in the end, as I found it difficult to debug this particular 
 section of code. I also found it quite difficult to deal with memory leaks and freeing allocated memory, as I was not able to figure out which allocated memory blocks are not being freed and where.
 \newline
 As my first ever big group project, this project has taught me a lot about working as a group. It made me understand how important communication is between your group members, to make sure 
-that you are not working on the same parts of the program and to parallelise our work effectively. This project has also massively developed my skill and ability in using Git as previously, I had 
-very rarely used Git and it was only for individual projects. Whereas, throughout this project, I was able to learn how to create new branches, merge branches, switch to different branches, resolve merge 
-conflicts and generally utilise Git as a more collaborative tool, allowing me to understand how powerful it really is. I believe that all of these skills that I have developed throughout this project 
+that you are not working on the same parts of the program and to parallelise work effectively. This project has also greatly developed my skill and ability in using Git as previously, I had 
+very rarely used Git and it was only for individual projects. Whereas, throughout this project, I was able to learn how to work with different branches, resolve merge conflicts and utilise 
+Git as a more collaborative tool, allowing me to understand how powerful it really is. I believe that all of the skills that I have developed throughout this project 
 will be really useful to me in the future both in more group projects and individual projects too.
 
 \subsection{Kritik Pant}
 
-I believe that I fit in well in the group and got along with everyone. I enjoyed the project and was especially helpfulin the development of the Emulator, Assembler and the Extension. 
+I believe that I fit in well in the group and got along with everyone. I enjoyed the project and was especially helpful in the development of the Emulator, Assembler and the Extension. 
 While I initially thought that the Emulator would be fairly easy, I found some parts quite difficult such as branching and dealing with different access modes. 
 I also found it difficult to solve memory issues, often relying on other members of the group to help me. This was especially true in the Assembler where I worked on 
 the implementation of the Symbol Table. While I found it fairly simple to build a basic table using a linked list, I found it difficult to diagnose and solve memory leaks. 
 Unexpectedly, I found the Extension to be a strength of mine due to my familiarity with path-finding algorithms and the game of Snake. I ran into some difficult 
 problems described above but, due to my knowledge of the Linux command line, I was able to solve them.
 \newline
-Through this project, I learnt the importance of maintaing good communication and coordination between group members. Since we always kept each other updated 
+Through this project, I learnt the importance of maintaining good communication and coordination between group members. Since we always kept each other updated 
 on progress and what we were working on, we were able to avoid duplication of work and it was easier for members to help each other. I aim to continue this in 
 future projects. I also improved my ability to use Git. Previously, I had only used Git as a version tracking system on personal projects. Through this project, 
 I learnt how to solve conflicts, create branches and use Continuous Integration to speed up testing. I believe that these skills will be helpful in future projects 
