@@ -1,8 +1,11 @@
 #ifndef MAZE_H
 #define MAZE_H
 
-#include "global.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include "global.h"
 
 typedef struct {
     int px;
