@@ -3,7 +3,13 @@
 #include <stdbool.h>
 #include "symbolTable.h"
 
-// Adding to Symbol Table
+/**
+ * Adds a new node to the Symbol Table.
+ *
+ * @param table The symbol table to which to add the new node
+ * @param key The key of the new node
+ * @param value The value of the new node
+ */
 void add_to_table(Symbol_Table *table, Key key, Value value) {
   Node_t *new_node = make_list_node(key, value, 0, NULL);
   if (table->head == NULL) {
@@ -17,7 +23,13 @@ void add_to_table(Symbol_Table *table, Key key, Value value) {
   }
 }
 
-// Check existence of key in Symbol Table
+/**
+ * Checks if a given key exists within the symbol table.
+ *
+ * @param table The symbol table in question
+ * @param key The key that is to be checked if it exists within the table
+ * @return True iff the given keys exists within the symbol table, false otherwise
+ */
 bool exists_in_table(Symbol_Table *table, Key key) {
   if (table == NULL) return false;
   Node_t *current = table->head;
@@ -30,7 +42,12 @@ bool exists_in_table(Symbol_Table *table, Key key) {
   return false;
 }
 
-// Removing from Symbol Table
+/**
+ * Removes a node from the symbol table.
+ *
+ * @param table The symbol table from which to remove the node
+ * @param key The key of the node that is to be removed
+ */
 void remove_from_table(Symbol_Table *table, Key key) {
   Node_t *current = table->head;
   Node_t *previous = NULL;
@@ -50,7 +67,13 @@ void remove_from_table(Symbol_Table *table, Key key) {
   }
 }
 
-// Finding in Symbol Table
+/**
+ * Finds the node with the given key in the symbol table.
+ *
+ * @param table The symbol table in which the node is to be found
+ * @param key The key of the node that is to be found within the table
+ * @return The node with the given key value if it exists, else NULL
+ */
 Node_t *find_in_table(Symbol_Table *table, Key key) {
   Node_t *current = table->head;
   while (current != NULL) {
@@ -62,7 +85,11 @@ Node_t *find_in_table(Symbol_Table *table, Key key) {
   return NULL;
 }
 
-// Freeing Symbol Table
+/**
+ * Frees the dynamically allocated symbol table.
+ *
+ * @param table The symbol table to free
+ */
 void free_table(Symbol_Table *table) {
   Node_t *current = table->head;
   Node_t *next = NULL;
@@ -75,7 +102,13 @@ void free_table(Symbol_Table *table) {
   free(table);
 }
 
-// Sets address of a single dependency
+/**
+ * Sets the address of a single dependency.
+ *
+ * @param node 
+ * @param index
+ * @param lines
+ */
 void set_address(Node_t node, int index, token_line *lines) {
   int dependency_line = node.dependencies[index];
   int offset = (node.address - dependency_line);
@@ -83,14 +116,28 @@ void set_address(Node_t node, int index, token_line *lines) {
   sprintf(dependent_operand->word, "%d", offset);
 }
 
-// Set address of all dependencies of a node
+/**
+ * Sets the address of all dependencies of a node.
+ *
+ * @param table 
+ * @param node
+ * @param lines
+ */
 void set_addresses(Symbol_Table *table, Node_t node, token_line *lines) {
   for (int i = 0; i < node.no_dependencies; i++) {
     set_address(node, i, lines);
   }
 }
 
-// Returns pointer to a new Node_t with the given values
+/**
+ * Returns pointer to a new Node_t with the given values.
+ *
+ * @param label The key of the new node
+ * @param address The value of the new node
+ * @param no_dependencies
+ * @param next The next node after the new node to which the new node should point to
+ * @return A pointer to a new node with the given key and value
+ */
 Node_t *make_list_node(Key label, Value address, int no_dependencies, Node_t *next) {
   Node_t *new_node = malloc(sizeof(*new_node));
   if (new_node == NULL) {
@@ -109,13 +156,26 @@ Node_t *make_list_node(Key label, Value address, int no_dependencies, Node_t *ne
   return new_node;
 }
 
+/**
+ * Free a given dynamically allocated node.
+ *
+ * @param node The node to be freed
+ */
 void free_list_node(Node_t *node) {
   free(node->label);
   free(node->dependencies);
   free(node);
 }
 
-// Add dependency to symbol table
+/**
+ * Adds a dependency to the symbol table.
+ *
+ * @param table
+ * @param label
+ * @param op
+ * @param line_no
+ * @param lines
+ */
 void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, token_line *lines) {
   if (exists_in_table(table, label)) {
     Node_t *node = find_in_table(table, label);
@@ -144,7 +204,14 @@ void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, tok
   }
 }
 
-// Add address to symbol table
+/**
+ * Adds an address to the symbol table.
+ *
+ * @param table
+ * @param label
+ * @param line_no
+ * @param lines
+ */
 void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines) {
   // Remove ':' from end of string
   int length = strlen(label);
