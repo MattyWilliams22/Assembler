@@ -9,4 +9,4 @@
 double get_tick_speed();
 void input();
 int get_path(int *path);
-void ai_loop();
+void autonomous_loop();

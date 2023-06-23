@@ -1,5 +1,16 @@
 #include "dijkstra.h"
 
+/**
+ * Performs pathfinding on the grid using dijkstra's algorithm to find the shortest path from the source to the destination.
+ * 
+ * @param parent The 2D array containing the parents of each cell from a search
+ * @param srcRow The row that the search starts at
+ * @param srcCol The column that the search starts at
+ * @param destRow The row that the search ends at
+ * @param destCol The column that the search ends at
+ * @param path The array of flags to be set by the function
+ * @return The length of the path array 
+ */
 int dijkstra(int **parent, int srcRow, int srcCol, int destRow, int destCol, int *path) {
   int dx[] = {0, 0, -1, 1};
   int dy[] = {-1, 1, 0, 0};

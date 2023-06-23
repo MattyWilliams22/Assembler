@@ -1,5 +1,9 @@
 #include "game_utils.h"
 
+/**
+ * Checks for a key press by the user. 
+ * Does not wait for the user to press enter.
+ */
 int keyboard_event() {
   struct termios oldterminal, newterminal;
   int ch;
@@ -25,6 +29,12 @@ int keyboard_event() {
   return 0;
 }
 
+/**
+ * Sets the position of the fruit to a random empty position on the game_grid.
+ * 
+ * @param height The height of the grid
+ * @param width The width of the grid
+ */
 void get_fruit(int height, int width) {
   while (game_grid[fruitY][fruitX] != EMPTY) {
     fruitX = rand() % width;
@@ -33,6 +43,12 @@ void get_fruit(int height, int width) {
   game_grid[fruitY][fruitX] = FRUIT;
 }
 
+/**
+ * Sets the position of the snakes head to a random empty position on the game_grid.
+ * 
+ * @param height The height of the grid
+ * @param width The width of the grid
+ */
 void get_start_point(int height, int width) {
   while (game_grid[y][x] != EMPTY) {
     x = rand() % width;
@@ -41,18 +57,19 @@ void get_start_point(int height, int width) {
   game_grid[y][x] = HEAD;
 }
 
-void check_collision_default() {
-    if (game_grid[y][x] == TAIL || game_grid[y][x] == WALL) {
-      gameover = 1;
-    }
-}
-
-void check_collision_maze() {
+/**
+ * Sets gameover to 1 if the head of the snake had collided into a wall or its own tail.
+ */
+void check_collision() {
   if (game_grid[y][x] == WALL || game_grid[y][x] == TAIL) {
     gameover = 1;
   }
 }
 
+/**
+ * Checks if the head of the snake has reached the edge of the grid,
+ * in which case it teleports to the other side of the grid.
+ */
 void check_teleport() {
   if (game_grid[y][x] == WALL) {
     if (x == 0) {
@@ -67,6 +84,10 @@ void check_teleport() {
   }
 }
  
+/**
+ * Contains the logic required to move the snake by one position.
+ * The direction of movement is determined by the current state of the flag.
+ */
 void logic() {
   for (int i = nTail; i > 0; i--) {
     tailX[i] = tailX[i - 1];
@@ -101,11 +122,7 @@ void logic() {
     check_teleport();
   }
 
-  if (gridType == MAZE) {
-    check_collision_maze();
-  } else {
-    check_collision_default();
-  }
+  check_collision();
 
   if (game_grid[y][x] == FRUIT) {
     score += 10;
@@ -118,6 +135,9 @@ void logic() {
   game_grid[y][x] = HEAD;
 }
 
+/**
+ * Sets up the game variables ready to start a game of snake using the default grid.
+ */
 void setup() {
   system("clear");
   gameover = 0;
@@ -144,6 +164,9 @@ void setup() {
   gridWidth = WIDTH;
 }
 
+/**
+ * Sets up the game variables ready to start a game of snake using a randomly generated maze as the grid.
+ */
 void maze_setup() {
   printf("Enter maze height/width: ");
   scanf("%d", &mazeHeight);
@@ -166,6 +189,9 @@ void maze_setup() {
   flag = -1;
 }
 
+/**
+ * If the gameover variable is set to 1, ask the user if they want to restart or exit.
+ */
 void check_gameover() {
   if (gameover) {
     printf("\nGame Over!\n");

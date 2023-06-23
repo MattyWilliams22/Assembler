@@ -46,13 +46,13 @@ InstructionMapping instructionMappings[] = {
 };
 
 /**
- * Given an assembly instruction, if the assembly instruction is not supported by our assembler,
- * the function modifies the instruction into a different instructions which performs the same
+ * Given an assembly instruction, if the assembly instruction is not supported by the emulator,
+ * the function modifies the instruction into a different instruction which performs the same
  * function.
  *
  * @param line The assembly instruction to potentially convert if necessary into an alternate instruction
- * @return Either the original instruction that was input or an alternative version supported by our
- *         assembler if necessary
+ * @return Either the original instruction that was input or an alternative version supported by the
+ *         emulator if necessary
  */
 token_line alias(token_line line) {
   int zr_pos = -1;
@@ -295,7 +295,7 @@ void get_types_b(operand *operands, int op_count) {
 }
 
 /**
- * Given an array of operands of a B. instruction, assigns each operand 
+ * Given an array of operands of a BCOND instruction, assigns each operand 
  * its type based on its value. Types include: IMM, REG, SHIFT, COND, LABEL
  *
  * @param operands The array of operands which are meant to be processed
@@ -333,11 +333,8 @@ void get_types_br(operand *operands, int op_count) {
  * @param op_count The number of operands passed
  */
 void get_types_str(operand *operands, int op_count) {
-  // Need to deal with [] somehow!
-
   operands[0].type = REG;
   operands[1].type = REG;
-  
   int length = strlen(operands[2].word);
   if (operands[2].word[length - 1] == '!') {
     // <Rt>, [<Xn>, #<simm>]!                    (Pre-index)
@@ -353,10 +350,10 @@ void get_types_str(operand *operands, int op_count) {
     // <Rt>, [<Xn>, <Rm>{, lsl #<amount>}]
     operands[2].type = REG;
     if (op_count == 4) {
-    // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
-    operands[3].type = SHIFT;
+      // <Rt>, [<Xn>, <Rm>, lsl #<amount>]
+      operands[3].type = SHIFT;
     } else {
-    // <Rt>, [<Xn>, <Rm>]
+      // <Rt>, [<Xn>, <Rm>]
     }
   }
 }
@@ -589,11 +586,11 @@ token_line *read_assembly(FILE* fp, int nlines, int *line_count) {
         lines[*line_count] = *current_line;
         lines[*line_count] = alias(lines[*line_count]);
         if (current_line->opcode == B && current_line->operands[0].word[0] != '#') {
-          add_dependency(label_table, current_line->operands[0].word, current_line->operands[0], *line_count, lines);
+          add_dependency(label_table, current_line->operands[0].word, *line_count, lines);
         } else if (current_line->opcode == BCOND && current_line->operands[1].word[1] != '#') {
-          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], *line_count, lines);
+          add_dependency(label_table, current_line->operands[1].word, *line_count, lines);
         } else if (current_line->opcode == LDR && current_line->operands[1].word[1] != '#') {
-          add_dependency(label_table, current_line->operands[1].word, current_line->operands[1], *line_count, lines);
+          add_dependency(label_table, current_line->operands[1].word, *line_count, lines);
         }
         (*line_count)++;
       } else {

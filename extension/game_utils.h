@@ -12,8 +12,7 @@
 int keyboard_event();
 void get_fruit(int height, int width);
 void get_start_point(int height, int width);
-void check_collision_default();
-void check_collision_maze();
+void check_collision();
 void check_teleport();
 void logic();
 void setup();

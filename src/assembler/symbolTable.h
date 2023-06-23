@@ -28,9 +28,9 @@ typedef struct {
 } Symbol_Table;
 
 // Prototypes
-void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, token_line *lines);
+void add_dependency(Symbol_Table *table, Key label, int line_no, token_line *lines);
 void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines);
-void set_addresses(Symbol_Table *table, Node_t node, token_line *lines);
+void set_addresses(Node_t node, token_line *lines);
 void free_table(Symbol_Table *table);
 void free_list_node(Node_t *node);
 Node_t *make_list_node(Key label, Value address, int no_dependencies, Node_t *next);

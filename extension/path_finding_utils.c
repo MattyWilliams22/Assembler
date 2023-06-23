@@ -1,5 +1,14 @@
 #include "path_finding_utils.h"
 
+/**
+ * Determines whether a cell on the grid is safe to move to. 
+ * Checks that the row and col values are within the expected range 
+ * and that the cell is not a wall or the tail of the snake. 
+ *
+ * @param row The row within the grid that is being checked
+ * @param col The column within the grid that is being checked
+ * @return True iff the cell is safe to move to and false otherwise.
+ */
 bool isSafe(int row, int col) {
   if (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth) {
     return (game_grid[row][col] != WALL && game_grid[row][col] != TAIL && game_grid[row][col] != HEAD);
@@ -7,6 +16,18 @@ bool isSafe(int row, int col) {
   return false;
 }
 
+/**
+ * Converts a 2D array of parents into an array of flags by backtracking from the destination cell
+ * to the source cell and adding a flag for every move made. 
+ *
+ * @param parent The 2D array containing the parents of each cell from a search
+ * @param path The array of flags to be set by the function
+ * @param srcRow The row that the path starts at
+ * @param srcCol The column that the path starts at
+ * @param destRow The row that the path ends at
+ * @param destCol The column that the path ends at
+ * @return The length of the path array. 
+ */
 int calculate_path(int **parent, int *path, int srcRow, int srcCol, int destRow, int destCol) {
   int path_length = 0;
   int curr_row = destRow;
@@ -48,6 +69,9 @@ int calculate_path(int **parent, int *path, int srcRow, int srcCol, int destRow,
   return path_length;
 }
 
+/**
+ * Calls a drawing function based upon the type of grid used for the game.
+ */
 void draw() {
   if (gridType == STANDARD) {
     draw_default_grid(game_grid, HEIGHT, WIDTH, nTail, score);

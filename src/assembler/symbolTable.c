@@ -103,11 +103,13 @@ void free_table(Symbol_Table *table) {
 }
 
 /**
- * Sets the address of a single dependency.
+ * Sets the address of a single dependency. Replaces the value of the operand that 
+ * references a label with an immediate value equal to the offset between the 
+ * address of the label and the address of the dependency.
  *
- * @param node 
- * @param index
- * @param lines
+ * @param node The node containing a list of dependencies
+ * @param index The index of the dependency within the list of dependencies
+ * @param lines The array of token_line that needs to be altered
  */
 void set_address(Node_t node, int index, token_line *lines) {
   int dependency_line = node.dependencies[index];
@@ -119,11 +121,10 @@ void set_address(Node_t node, int index, token_line *lines) {
 /**
  * Sets the address of all dependencies of a node.
  *
- * @param table 
- * @param node
- * @param lines
+ * @param node The node containing a list of dependencies
+ * @param lines The array of token_line that needs to be altered
  */
-void set_addresses(Symbol_Table *table, Node_t node, token_line *lines) {
+void set_addresses(Node_t node, token_line *lines) {
   for (int i = 0; i < node.no_dependencies; i++) {
     set_address(node, i, lines);
   }
@@ -134,7 +135,7 @@ void set_addresses(Symbol_Table *table, Node_t node, token_line *lines) {
  *
  * @param label The key of the new node
  * @param address The value of the new node
- * @param no_dependencies
+ * @param no_dependencies The number of dependencies that the new node will contain
  * @param next The next node after the new node to which the new node should point to
  * @return A pointer to a new node with the given key and value
  */
@@ -168,15 +169,17 @@ void free_list_node(Node_t *node) {
 }
 
 /**
- * Adds a dependency to the symbol table.
+ * Adds a dependency to the symbol table. 
+ * Searches for the label in the symbol table and sets the address of the dependency to the address of the label.
+ * If the address of the label is not yet known, the line_no is added to the list of dependencies for this node.
+ * If no node is found with the same label, a new node is created and added to the symbol table. 
  *
- * @param table
- * @param label
- * @param op
- * @param line_no
- * @param lines
+ * @param table The symbol table to look for the label in, and add or edit a node in
+ * @param label The string label to search for in the symbol table
+ * @param line_no The line that the dependent operand can be found in
+ * @param lines The array of token_line that may need to be altered
  */
-void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, token_line *lines) {
+void add_dependency(Symbol_Table *table, Key label, int line_no, token_line *lines) {
   if (exists_in_table(table, label)) {
     Node_t *node = find_in_table(table, label);
     node->dependencies = realloc(node->dependencies, (node->no_dependencies + 1) * sizeof(int));
@@ -206,11 +209,14 @@ void add_dependency(Symbol_Table *table, Key label, operand op, int line_no, tok
 
 /**
  * Adds an address to the symbol table.
+ * Searches for the label in the symbol table and sets the address of the node to the line_no.
+ * Then sets the address of all dependencies using this new address value.
+ * If no node is found with the same label, a new node is created and added to the symbol table. 
  *
- * @param table
- * @param label
- * @param line_no
- * @param lines
+ * @param table The symbol table to look for the label in, and add or edit a node in
+ * @param label The string label to search for in the symbol table
+ * @param line_no The address of the label
+ * @param lines The array of token_line that may need to be altered
  */
 void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines) {
   // Remove ':' from end of string
@@ -219,7 +225,7 @@ void add_address(Symbol_Table *table, Key label, int line_no, token_line *lines)
   if (exists_in_table(table, label)) {
     Node_t *node = find_in_table(table, label);
     node->address = line_no;
-    set_addresses(table, *node, lines);
+    set_addresses(*node, lines);
   } else {
     Node_t *new_node = (Node_t *)malloc(sizeof(Node_t));
     new_node->label = strdup(label);

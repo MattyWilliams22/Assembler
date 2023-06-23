@@ -1,5 +1,11 @@
 #include "snake.h"
 
+/**
+ * Calculates a tick speed value which decreases with each fruit that the player eats. 
+ * This causes the game to speed up as you progress.
+ *
+ * @return The tick speed value calculated. 
+ */
 double get_tick_speed() {
   double rate = 0.9;
   double multiplier = 1.0;
@@ -9,6 +15,9 @@ double get_tick_speed() {
   return TICKDELAY * multiplier + 50000;
 }
 
+/**
+ * Checks if the user has pressed a key and changes the flag accordingly. 
+ */
 void input() {
   if (keyboard_event()) {
     char key = getchar();
@@ -31,9 +40,12 @@ void input() {
   }
 }
 
-// Set path to an array of flags, 
-// which determine the way the snake must move to reach the fruit. 
-// Return the number of moves the snake must make to reach the fruit.
+/**
+ * Sets an array of flags which determine the path the snake should take to get to the fruit.
+ *
+ * @param path The array of flags
+ * @return The length of the array of flags 
+ */
 int get_path(int *path) {
   int **parent;
   parent = malloc(gridHeight * sizeof(*parent));
@@ -65,7 +77,10 @@ int get_path(int *path) {
   return path_length;
 }
 
-void ai_loop() {
+/**
+ * The gameplay loop when moves are deciding by a pathfinding algorithm
+ */
+void autonomous_loop() {
   int *path;
   path = malloc(gridHeight * gridWidth * sizeof(*path));
   int path_length;
@@ -124,7 +139,7 @@ int main() {
       usleep(get_tick_speed());
     }
   } else {
-    ai_loop();
+    autonomous_loop();
   }
 
   if (gridType == STANDARD) {
