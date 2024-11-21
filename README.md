@@ -12,8 +12,7 @@ This project is a group effort from the summer term of our first year at univers
 
 - **`src/`**: Source code for the emulator and assembler.
 - **`extension/`**: Code for the Snake game extension.
-- **`doc/`**: Documentation and design notes.
-- **`programs/`**: Sample assembly programs to test the emulator.
+- **`programs/`**: Code to get the assembler to work on a Raspberry Pi.
 
 ## Technologies Used
 
