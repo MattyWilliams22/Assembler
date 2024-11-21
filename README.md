@@ -1,6 +1,6 @@
 # AArch64 Emulator and Assembler
 
-This project is a group effort from the autumn term of our second year at university. It includes an emulator and assembler for AArch64 binaries, along with an extension: a Snake game that employs various pathfinding algorithms.
+This project is a group effort from the summer term of our first year at university. It includes an emulator and assembler for AArch64 binaries, along with an extension: a Snake game that employs various pathfinding algorithms.
 
 ## Features
 
